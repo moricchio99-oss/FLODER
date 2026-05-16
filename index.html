@@ -446,13 +446,14 @@ async function fetchDocs(filters={}) {
 // ── MAIN RENDER ──
 async function render() {
   buildNav();
-  if(!S.profile && S.page !== 'home') S.page = 'home';
+
   await buildApp();
 }
 
 async function buildApp() {
   const app = document.getElementById('APP');
-  if(!S.profile) {
+  // tutti possono vedere il feed
+  if(false) {
     app.innerHTML = landingHTML();
     return;
   }
