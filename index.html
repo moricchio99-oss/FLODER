@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Floder — Share Documents</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f5f4f1;--sur:#fff;--sur2:#f0ede8;--bor:#e2ddd6;--bor2:#ccc8be;
+  --tx:#18170f;--tx2:#6b6758;--tx3:#a09c90;
+  --ac:#16a34a;--ach:#15803d;--acb:#f0fdf4;
+  --wc:#2b5797;--wb:#eef2fa;--ec:#107c41;--eb:#edf7f0;
+  --pc:#c43e1c;--pb:#fdf0ec;--dc:#b91c1c;--db:#fef2f2;
+  --gr:#059669;--sh:0 1px 3px rgba(0,0,0,.07);--sh2:0 4px 16px rgba(0,0,0,.1);
+}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px}
+.nav{background:#fff;border-bottom:1px solid var(--bor);height:54px;display:flex;align-items:center;padding:0 18px;gap:14px;position:sticky;top:0;z-index:100;box-shadow:var(--sh)}
+.logo{display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0}
+.logo-word{font-size:15px;font-weight:800;letter-spacing:-.4px;color:var(--tx)}
+.logo-word span{color:var(--ac)}
+.sw{flex:1;max-width:420px;margin:0 auto}
+.sinp{width:100%;border:1px solid var(--bor);background:var(--sur2);border-radius:18px;padding:6px 16px;font-size:13px;font-family:inherit;color:var(--tx);outline:none}
+.sinp:focus{border-color:var(--ac);background:#fff;box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+.sinp::placeholder{color:var(--tx3)}
+.nr{display:flex;align-items:center;gap:6px;margin-left:auto}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;border:1px solid var(--bor);background:transparent;color:var(--tx2);font-size:12px;font-family:inherit;font-weight:500;cursor:pointer}
+.btn:hover{background:var(--sur2)}
+.btna{background:var(--ac);border-color:var(--ac);color:#fff}.btna:hover{background:var(--ach)}
+.av{width:28px;height:28px;border-radius:50%;border:2px solid var(--bor);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;overflow:hidden;background:var(--ac)}
+.av img{width:100%;height:100%;object-fit:cover}
+.layout{display:flex;min-height:calc(100vh - 54px)}
+.sb{width:188px;flex-shrink:0;border-right:1px solid var(--bor);background:#fff;padding:14px 8px}
+.ss{font-size:9.5px;font-weight:700;letter-spacing:.7px;color:var(--tx3);text-transform:uppercase;padding:12px 8px 4px}
+.si2{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:7px;cursor:pointer;color:var(--tx2);font-size:12.5px;font-weight:500;border:none;background:transparent;width:100%;text-align:left;font-family:inherit;margin-bottom:1px}
+.si2:hover{background:var(--sur2)}.si2.on{background:var(--acb);color:var(--ac)}
+.si2 svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;flex-shrink:0}
+.sbg{margin-left:auto;font-size:10px;color:var(--tx3);background:var(--sur2);padding:1px 5px;border-radius:6px}
+.si2.on .sbg{background:var(--acb);color:var(--ac)}
+.ct{flex:1;padding:20px 24px;min-width:0}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.type-pills{display:flex;gap:4px;flex-wrap:wrap}
+.tpill{padding:5px 13px;border-radius:20px;border:1px solid var(--bor);background:#fff;color:var(--tx2);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap}
+.tpill:hover{border-color:var(--bor2);background:var(--sur2)}
+.tpill.on{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:600}
+.sort-seg{display:flex;background:var(--sur2);border:1px solid var(--bor);border-radius:8px;padding:3px;gap:2px}
+.sort-seg input[type=radio]{display:none}
+.sort-seg label{padding:4px 11px;border-radius:6px;font-size:11.5px;font-weight:500;color:var(--tx3);cursor:pointer;white-space:nowrap;user-select:none}
+.sort-seg label:hover{color:var(--tx2)}
+.sort-seg input[type=radio]:checked + label{background:#fff;color:var(--tx);font-weight:600;box-shadow:var(--sh)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.card{background:#fff;border:1px solid var(--bor);border-radius:11px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:.15s}
+.card:hover{border-color:var(--bor2);box-shadow:var(--sh2);transform:translateY(-2px)}
+.cth{height:130px;position:relative;display:flex;align-items:center;justify-content:center;padding:10px 12px;flex-shrink:0;overflow:hidden}
+.cth-word{background:var(--wb)}.cth-excel{background:var(--eb)}.cth-ppt{background:var(--pb)}.cth-pdf{background:var(--db)}
+.cbdg{position:absolute;top:7px;left:7px;font-size:9px;font-weight:700;letter-spacing:.4px;padding:2px 6px;border-radius:4px;color:#fff;text-transform:uppercase}
+.bdg-word{background:var(--wc)}.bdg-excel{background:var(--ec)}.bdg-ppt{background:var(--pc)}.bdg-pdf{background:var(--dc)}
+.pw{width:78px;height:104px;background:#fff;border-radius:3px;box-shadow:0 2px 8px rgba(0,0,0,.12);padding:8px 7px;display:flex;flex-direction:column}
+.pwt{height:5px;background:var(--wc);border-radius:2px;width:70%;margin-bottom:6px;opacity:.85}
+.pwl{height:2.5px;background:var(--wc);border-radius:1px;margin-bottom:3px}
+.pwl.f{width:90%;opacity:.2}.pwl.m{width:70%;opacity:.15}.pwl.s{width:50%;opacity:.15}
+.pwg{height:4px}.pwb{height:16px;background:var(--wb);border-radius:2px;margin-bottom:4px;width:100%}
+.pe{width:90px;height:104px;background:#fff;border-radius:3px;box-shadow:0 2px 8px rgba(0,0,0,.12);overflow:hidden;display:flex;flex-direction:column}
+.peh{background:var(--ec);height:14px;display:flex;align-items:center;padding:0 4px;gap:2px;flex-shrink:0}
+.pehc{flex:1;height:6px;background:rgba(255,255,255,.5);border-radius:1px}
+.per{display:flex;border-bottom:1px solid #e8f4ed;flex:1}.per:last-child{border:none}
+.pec{flex:1;border-right:1px solid #e8f4ed;padding:2px 3px;display:flex;align-items:center}.pec:last-child{border:none}
+.pev{height:3px;background:var(--ec);border-radius:1px;opacity:.25;width:100%}
+.pec:first-child .pev{opacity:.5;width:70%}
+.pebar{height:100%;background:var(--ec);border-radius:1px 1px 0 0;opacity:.35;align-self:flex-end;min-width:4px}
+.pp{width:104px;height:78px;background:#fff;border-radius:3px;box-shadow:0 2px 8px rgba(0,0,0,.12);padding:7px 8px;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.ppa{position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--pc);opacity:.8}
+.ppt2{height:6px;background:var(--pc);border-radius:2px;width:55%;margin-left:8px;margin-bottom:5px;opacity:.8}
+.pps{height:3px;background:var(--pc);border-radius:1px;width:35%;margin-left:8px;margin-bottom:8px;opacity:.4}
+.ppl{height:2.5px;background:var(--pc);border-radius:1px;margin-left:8px;margin-bottom:3px;opacity:.18}
+.pd{width:78px;height:104px;background:#fff;border-radius:3px;box-shadow:0 2px 8px rgba(0,0,0,.12);padding:8px 7px;display:flex;flex-direction:column;position:relative}
+.pdc{position:absolute;top:0;right:0;width:0;height:0;border-left:10px solid transparent;border-top:10px solid var(--db)}
+.pdt{height:5px;background:var(--dc);border-radius:2px;width:55%;margin-bottom:6px;opacity:.7}
+.pdl{height:2px;background:var(--dc);border-radius:1px;margin-bottom:3px}
+.pdl.f{width:88%;opacity:.18}.pdl.m{width:65%;opacity:.14}.pdl.s{width:45%;opacity:.14}
+.pdg{height:4px}.pdb{height:12px;background:var(--db);border-radius:2px;margin-bottom:3px;width:100%;border:1px solid rgba(185,28,28,.1)}
+.cb{padding:10px 11px;display:flex;flex-direction:column;flex:1}
+.ctitle{font-size:12px;font-weight:600;color:var(--tx);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:7px;min-height:32px}
+.cauth{display:flex;align-items:center;gap:5px;margin-bottom:5px;cursor:pointer;width:fit-content}
+.cauth:hover .can{color:var(--ac);text-decoration:underline}
+.cav2{width:16px;height:16px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:6px;font-weight:700;color:#fff;flex-shrink:0}
+.cav2 img{width:100%;height:100%;object-fit:cover}
+.can{font-size:11px;color:var(--tx2);font-weight:500}
+.cm{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--tx3);margin-bottom:8px}
+.cm svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;flex-shrink:0}
+.cdot{width:2px;height:2px;border-radius:50%;background:var(--bor2);flex-shrink:0}
+.cf{display:flex;gap:5px;padding-top:7px;border-top:1px solid var(--bor);margin-top:auto}
+.cfb{flex:1;display:flex;align-items:center;justify-content:center;gap:3px;height:26px;border-radius:6px;border:1px solid var(--bor);background:transparent;color:var(--tx2);font-size:9.5px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;overflow:hidden;padding:0 4px;transition:.1s}
+.cfb svg{width:9px;height:9px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;flex-shrink:0}
+.cfb:hover{background:var(--sur2);border-color:var(--bor2)}
+.cfb.sv{color:var(--gr);border-color:var(--gr);background:#f0fdf6}
+.cfd{background:var(--ac);border-color:var(--ac);color:#fff}
+.cfd svg{stroke:#fff}
+.cfd:hover{background:var(--ach)}
+.load-more-wrap{margin-top:20px;display:flex;flex-direction:column;align-items:center;gap:10px;padding-bottom:8px}
+.load-more-bar{width:100%;height:1px;background:var(--bor)}
+.load-more-info{font-size:12px;color:var(--tx3)}
+.load-more-info strong{color:var(--tx2)}
+.btn-load{display:inline-flex;align-items:center;gap:6px;padding:9px 24px;border-radius:8px;border:1px solid var(--bor);background:#fff;color:var(--tx2);font-size:13px;font-family:inherit;font-weight:500;cursor:pointer;transition:.12s;box-shadow:var(--sh)}
+.btn-load:hover{border-color:var(--bor2);background:var(--sur2)}
+.btn-load svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.btn-load.loading svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.card-enter{animation:fadeUp .2s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.sec{margin-bottom:24px}
+.sch{font-size:10.5px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:11px;display:flex;align-items:center;gap:6px}
+.sch small{font-size:10px;background:var(--sur2);color:var(--tx3);padding:1px 6px;border-radius:5px;font-weight:500;text-transform:none;letter-spacing:0}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:flex;align-items:center;justify-content:center;padding:14px;backdrop-filter:blur(2px)}
+.mo{background:#fff;border:1px solid var(--bor);border-radius:13px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:var(--sh2)}
+.moh{padding:15px 17px;display:flex;align-items:flex-start;gap:10px;position:sticky;top:0;background:#fff;border-bottom:1px solid var(--bor);z-index:1}
+.mox{margin-left:auto;background:transparent;border:none;cursor:pointer;color:var(--tx3);padding:4px;border-radius:5px;display:flex}
+.mox:hover{background:var(--sur2)}
+.mox svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.mob{padding:16px}
+.moi{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.miword{background:var(--wb)}.miexcel{background:var(--eb)}.mippt{background:var(--pb)}.mipdf{background:var(--db)}
+.pra{background:var(--sur2);border:1px solid var(--bor);border-radius:9px;padding:14px;margin:12px 0;text-align:center}
+.prl{font-size:9.5px;font-weight:600;letter-spacing:.5px;color:var(--tx3);text-transform:uppercase;margin-bottom:8px}
+.ma2{display:flex;gap:5px;margin-bottom:12px}
+.ma{display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:1;padding:7px;border-radius:7px;border:1px solid var(--bor);background:transparent;color:var(--tx2);font-size:11.5px;font-weight:500;cursor:pointer;font-family:inherit}
+.ma svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;flex-shrink:0}
+.ma:hover{background:var(--sur2)}
+.ma.lk{color:var(--ac);border-color:var(--ac);background:var(--acb)}.ma.lk svg{fill:var(--ac)}
+.ma.sv2{color:var(--gr);border-color:var(--gr);background:#f0fdf6}
+.madl{background:var(--ac);border-color:var(--ac);color:#fff}.madl svg{stroke:#fff}.madl:hover{background:var(--ach)}
+.cmt{display:flex;gap:8px;margin-bottom:10px}
+.cav3{width:24px;height:24px;border-radius:50%;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff}
+.cav3 img{width:100%;height:100%;object-fit:cover}
+.cmb{flex:1}.cmh{display:flex;align-items:center;gap:5px;margin-bottom:2px}
+.cmn{font-size:11.5px;font-weight:600;color:var(--tx);cursor:pointer}.cmn:hover{color:var(--ac)}
+.cmt2{font-size:10px;color:var(--tx3)}
+.cmtx{font-size:11.5px;color:var(--tx2);line-height:1.5}
+.cir{display:flex;gap:6px;align-items:center;margin-top:10px}
+.cir input{flex:1;border:1px solid var(--bor);border-radius:7px;padding:6px 9px;font-size:12px;font-family:inherit;outline:none}
+.cir input:focus{border-color:var(--ac);box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+.fl{margin-bottom:10px}
+.fl label{display:block;font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:3px}
+.fl input,.fl textarea,.fl select{width:100%;border:1px solid var(--bor);border-radius:7px;padding:6px 9px;font-size:12.5px;font-family:inherit;color:var(--tx);outline:none;background:#fff}
+.fl input:focus,.fl textarea:focus,.fl select:focus{border-color:var(--ac);box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+.fl textarea{resize:none;height:56px;line-height:1.5}
+.fh{font-size:10px;color:var(--tx3);margin-top:2px}
+.drp{border:2px dashed var(--bor2);border-radius:9px;padding:24px;text-align:center;cursor:pointer;margin-bottom:10px;transition:.15s}
+.drp:hover,.drp.drag{border-color:var(--ac);background:var(--acb)}
+.drp.ok{border-color:var(--gr);background:#f0fdf6}
+.drp p{font-size:12px;color:var(--tx2);margin-top:6px}
+.drp .ht{font-size:10px;color:var(--tx3);margin-top:3px}
+.atb{display:flex;border:1px solid var(--bor);border-radius:8px;overflow:hidden;margin-bottom:14px}
+.att{flex:1;padding:6px;font-size:12.5px;font-weight:500;border:none;background:transparent;cursor:pointer;color:var(--tx2);font-family:inherit}
+.att:hover{background:var(--sur2)}.att.on{background:var(--ac);color:#fff}
+.bts{display:flex;align-items:center;justify-content:center;gap:9px;padding:10px 14px;border-radius:8px;border:1px solid var(--bor);background:#fff;color:var(--tx);font-size:13px;font-family:inherit;font-weight:500;cursor:pointer;width:100%;margin-bottom:8px}
+.bts:hover{background:var(--sur2)}
+.bts img{width:18px;height:18px}
+.adv{display:flex;align-items:center;gap:10px;margin:12px 0}
+.adv-l{flex:1;height:1px;background:var(--bor)}
+.adv span{font-size:11px;color:var(--tx3);white-space:nowrap}
+.pco{height:88px;border-radius:12px;background:linear-gradient(135deg,var(--acb),#dcfce7);margin-bottom:-30px;border:1px solid var(--bor)}
+.pca{background:#fff;border:1px solid var(--bor);border-radius:12px;padding:12px 16px 16px;margin-bottom:14px;box-shadow:var(--sh)}
+.pav{width:60px;height:60px;border-radius:50%;border:3px solid #fff;box-shadow:var(--sh2);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;cursor:pointer;position:relative;margin-bottom:8px}
+.pav img{width:100%;height:100%;object-fit:cover}
+.str{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:18px}
+.stb{background:#fff;border:1px solid var(--bor);border-radius:9px;padding:11px 12px;box-shadow:var(--sh)}
+.stn{font-size:20px;font-weight:700;color:var(--tx);letter-spacing:-.5px}
+.stl{font-size:10px;color:var(--tx3);margin-top:1px}
+.ubdg{display:flex;align-items:center;gap:8px;padding:9px 11px;background:var(--sur2);border-radius:9px;border:1px solid var(--bor);cursor:pointer;margin-bottom:12px}
+.ubdg:hover{border-color:var(--bor2)}
+.dvd{height:1px;background:var(--bor);margin:10px 0}
+.emp{text-align:center;padding:44px 16px;color:var(--tx3)}
+.emp p{font-size:12px;margin-top:8px}
+.twr{position:fixed;bottom:18px;right:18px;z-index:999;display:flex;flex-direction:column;gap:5px;pointer-events:none}
+.tw2{color:#fff;padding:8px 13px;border-radius:8px;font-size:12px;font-weight:500;animation:tin .2s ease;box-shadow:var(--sh2)}
+@keyframes tin{from{transform:translateY(6px);opacity:0}to{transform:translateY(0);opacity:1}}
+.prog{width:100%;height:3px;background:var(--bor);border-radius:2px;margin-top:6px;overflow:hidden}
+.prog-bar{height:100%;background:var(--ac);border-radius:2px;transition:width .3s}
+.tag-wrap{display:flex;flex-wrap:wrap;gap:3px;padding:4px 7px;border:1px solid var(--bor);border-radius:7px;min-height:30px;cursor:text;background:#fff;align-items:center}
+.tag-wrap:focus-within{border-color:var(--ac);box-shadow:0 0 0 3px rgba(22,163,74,.12)}
+.tag-chip{display:inline-flex;align-items:center;gap:2px;background:var(--acb);color:var(--ac);padding:1px 6px;border-radius:9px;font-size:10.5px;font-weight:500}
+.tag-chip button{background:none;border:none;cursor:pointer;color:inherit;font-size:11px;padding:0;line-height:1;opacity:.6}
+.tag-inp{border:none;outline:none;font-family:inherit;font-size:11.5px;color:var(--tx);flex:1;min-width:60px;padding:0;background:transparent}
+input[type=file]{display:none}
+.spin{animation:spin .8s linear infinite;display:inline-block}
+.landing{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 54px);padding:40px 24px;text-align:center}
+.landing h1{font-size:32px;font-weight:800;letter-spacing:-.5px;margin-bottom:12px;color:var(--tx)}
+.landing h1 span{color:var(--ac)}
+.landing p{font-size:15px;color:var(--tx2);max-width:420px;line-height:1.6;margin-bottom:28px}
+.landing-btns{display:flex;gap:10px}
+.feat{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:600px;margin-top:40px}
+.feat-card{background:#fff;border:1px solid var(--bor);border-radius:11px;padding:18px;text-align:left}
+.feat-icon{width:32px;height:32px;background:var(--acb);border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+.feat-icon svg{width:16px;height:16px;stroke:var(--ac);fill:none;stroke-width:1.8;stroke-linecap:round}
+.feat-t{font-size:12.5px;font-weight:700;color:var(--tx);margin-bottom:3px}
+.feat-d{font-size:11px;color:var(--tx3);line-height:1.5}
+</style>
+</head>
+<body>
+
+<div id="NV"></div>
+<div id="APP"></div>
+<div class="twr" id="TW"></div>
+<input type="file" id="FILE_INPUT" accept=".docx,.xlsx,.pptx,.pdf">
+
+<script>
+// ── SUPABASE CONFIG ──
+const SUPABASE_URL = 'https://anfqwtiugwknlcidbdzh.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_e7q72bBIfa98OJEOssnB7g_3MbAsBp3';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── STATO APP ──
+const S = {
+  user: null,
+  profile: null,
+  page: 'home',
+  tf: 'all',
+  sort: 'recent',
+  search: '',
+  vu: null,
+  tags: [],
+  uploadType: 'word',
+};
+const PG = {};
+const PAGE_SIZE = 9;
+let suid = 0;
+
+// ── INIT ──
+async function init() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) await loadProfile(session.user);
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (session) {
+      await loadProfile(session.user);
+    } else {
+      S.user = null;
+      S.profile = null;
+    }
+    render();
+  });
+  render();
+}
+
+async function loadProfile(user) {
+  S.user = user;
+  const { data } = await sb.from('profiles').select('*').eq('id', user.id).single();
+  S.profile = data;
+}
+
+// ── ICONS ──
+const I = {
+  home: `<path d="M2 7.5L8 2l6 5.5V14a.7.7 0 01-.7.7H2.7A.7.7 0 012 14V7.5z"/><path d="M5.5 14.7V10h5v4.7"/>`,
+  trending: `<polyline points="1,12 5,7 9,11 15,4"/><polyline points="11,4 15,4 15,8"/>`,
+  explore: `<circle cx="8" cy="8" r="6"/><path d="M10.5 5.5l-2 3-3 1.5 2-3z"/>`,
+  bookmark: `<path d="M3 2h10a1 1 0 011 1v11l-6-3-6 3V3a1 1 0 011-1z"/>`,
+  file: `<path d="M10 1H4a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V6z"/><polyline points="10,1 10,6 15,6"/>`,
+  word: `<path d="M10 1H4a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V6z"/><polyline points="10,1 10,6 15,6"/><path d="M5 9l1 3.5L8 9l2 3.5L11 9"/>`,
+  excel: `<path d="M10 1H4a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V6z"/><polyline points="10,1 10,6 15,6"/><line x1="5" y1="9" x2="11" y2="13"/><line x1="11" y1="9" x2="5" y2="13"/>`,
+  ppt: `<rect x="1" y="3" width="14" height="9" rx="1.2"/><line x1="8" y1="12" x2="8" y2="15"/><line x1="5" y1="15" x2="11" y2="15"/>`,
+  pdf: `<path d="M10 1H4a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V6z"/><polyline points="10,1 10,6 15,6"/><path d="M4.5 10h2a1 1 0 010 2h-2v-2z"/>`,
+  user: `<circle cx="8" cy="5.5" r="2.5"/><path d="M2.5 14c0-2.8 2.5-5 5.5-5s5.5 2.2 5.5 5"/>`,
+  logout: `<path d="M10 2h3v12h-3M6 11l4-4-4-4M10 8H2"/>`,
+  upload: `<path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2M8 10V2M4 6l4-4 4 4"/>`,
+  download: `<path d="M8 2v8M4 7l4 4 4-4M2 14h12"/>`,
+  heart: `<path d="M8 13.5S1.5 10 1.5 6a3.5 3.5 0 016.5-2A3.5 3.5 0 0114.5 6c0 4-6.5 7.5-6.5 7.5z"/>`,
+  comment: `<path d="M14 8c0 3-2.7 5.5-6 5.5a6.2 6.2 0 01-2.4-.5L2 14.5l.5-3.5A5.4 5.4 0 012 8c0-3 2.7-5.5 6-5.5S14 5 14 8z"/>`,
+  eye: `<path d="M1 8s2.5-5.5 7-5.5S15 8 15 8s-2.5 5.5-7 5.5S1 8 1 8z"/><circle cx="8" cy="8" r="2"/>`,
+  clock: `<circle cx="8" cy="8" r="6"/><polyline points="8,4.5 8,8 10.5,10"/>`,
+  close: `<line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/>`,
+  edit: `<path d="M11 2l3 3-8.5 8.5H2v-3.5z"/>`,
+  link: `<path d="M6.5 9.5a3.5 3.5 0 005 0L13 8a3.5 3.5 0 00-5-5L7 4"/><path d="M9.5 6.5a3.5 3.5 0 00-5 0L3 8a3.5 3.5 0 005 5l1-1"/>`,
+  savi: `<path d="M3 2h10a1 1 0 011 1v11l-6-3-6 3V3a1 1 0 011-1z"/>`,
+  plus: `<line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/>`,
+  refresh: `<path d="M2 8a6 6 0 1010.7-3.7M14 2v4h-4"/>`,
+  share: `<circle cx="14" cy="3" r="1.5"/><circle cx="14" cy="13" r="1.5"/><circle cx="2" cy="8" r="1.5"/><line x1="3.5" y1="8.9" x2="12.5" y2="12.1"/><line x1="12.5" y1="3.9" x2="3.5" y2="7.1"/>`,
+};
+function ic(n, w=14, x='') {
+  return `<svg viewBox="0 0 16 16" style="width:${w}px;height:${w}px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;${x}">${I[n]}</svg>`;
+}
+
+// ── LOGO ──
+const LOGO_MARK = `<svg viewBox="0 0 30 30" fill="none" style="width:28px;height:28px;flex-shrink:0"><rect x="2" y="10" width="26" height="17" rx="3" fill="#16a34a"/><path d="M2 14V11Q2 8 5 8H11Q13.5 10 16 10H2Z" fill="#15803d"/><line x1="8" y1="18" x2="22" y2="18" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.7"/><line x1="8" y1="22" x2="19" y2="22" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.45"/></svg>`;
+
+// ── TOAST ──
+function toast(msg, ok) {
+  const w = document.getElementById('TW'), el = document.createElement('div');
+  el.className = 'tw2';
+  el.style.background = ok ? '#16a34a' : ok === false ? '#dc2626' : '#18170f';
+  el.textContent = msg;
+  w.appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+}
+
+// ── AVATAR HELPER ──
+function avEl(profile, sz) {
+  if (!profile) return `<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:#ccc;flex-shrink:0"></div>`;
+  const s = `width:${sz}px;height:${sz}px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:${Math.floor(sz*.34)}px;font-weight:700;color:#fff;flex-shrink:0;background:#16a34a`;
+  const ini = (profile.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  return profile.avatar_url
+    ? `<div style="${s}"><img src="${profile.avatar_url}" style="width:100%;height:100%;object-fit:cover"></div>`
+    : `<div style="${s}">${ini}</div>`;
+}
+
+// ── THUMBNAILS ──
+function thumb(t) {
+  if(t==='word') return `<div class="pw"><div class="pwt"></div><div class="pwl f"></div><div class="pwl m"></div><div class="pwl f"></div><div class="pwl s"></div><div class="pwg"></div><div class="pwb"></div><div class="pwl f"></div><div class="pwl m"></div></div>`;
+  if(t==='excel') return `<div class="pe"><div class="peh"><div class="pehc"></div><div class="pehc"></div><div class="pehc"></div><div class="pehc"></div></div>${['80%','55%','70%','45%','65%','50%'].map(h=>`<div class="per"><div class="pec"><div class="pev" style="width:75%"></div></div><div class="pec"><div class="pebar" style="height:${h}"></div></div><div class="pec"><div class="pebar" style="height:${parseInt(h)*.7+'%'}"></div></div><div class="pec"><div class="pebar" style="height:${parseInt(h)*.9+'%'}"></div></div></div>`).join('')}</div>`;
+  if(t==='ppt') return `<div class="pp"><div class="ppa"></div><div class="ppt2"></div><div class="pps"></div><div class="ppl" style="width:68%"></div><div class="ppl" style="width:52%"></div><div class="ppl" style="width:60%"></div></div>`;
+  return `<div class="pd"><div class="pdc"></div><div class="pdt"></div><div class="pdl f"></div><div class="pdl m"></div><div class="pdl f"></div><div class="pdg"></div><div class="pdb"></div><div class="pdl f"></div><div class="pdl s"></div></div>`;
+}
+
+function extOf(t) { return {word:'docx',excel:'xlsx',ppt:'pptx',pdf:'pdf'}[t]||'' }
+function ftOf(t) { return {word:'Word Document',excel:'Excel Spreadsheet',ppt:'PowerPoint',pdf:'PDF Document'}[t]||'' }
+function bdgOf(t) { return {word:'WORD',excel:'EXCEL',ppt:'PPT',pdf:'PDF'}[t]||'' }
+
+// ── CARD ──
+function card(doc, animated=false) {
+  const p = doc.profiles || {};
+  const ini = (p.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const liked = S.user && (doc.likes||[]).some(l=>l.user_id===S.user.id);
+  const saved = S.user && (doc.saves||[]).some(l=>l.user_id===S.user.id);
+  return `<div class="card${animated?' card-enter':''}" onclick="openDoc('${doc.id}')">
+    <div class="cth cth-${doc.file_type}"><span class="cbdg bdg-${doc.file_type}">${bdgOf(doc.file_type)}</span>${thumb(doc.file_type)}</div>
+    <div class="cb">
+      <div class="ctitle">${doc.title}</div>
+      <div class="cauth" onclick="event.stopPropagation();goUser('${doc.user_id}')">
+        <div class="cav2" style="background:#16a34a;color:#fff;font-size:6px;font-weight:700">${p.avatar_url?`<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover">`:`${ini}`}</div>
+        <span class="can">${p.name||'Unknown'}</span>
+      </div>
+      <div class="cm">${ic('eye',9)} ${(doc.views||0).toLocaleString()} <span class="cdot"></span> ${ic('clock',9)} ${timeAgo(doc.created_at)}</div>
+      <div class="cf">
+        <button class="cfb${saved?' sv':''}" onclick="doSave(event,'${doc.id}')">${ic('savi',9)} ${saved?'Saved':'Save'}</button>
+        <a class="cfb cfd" href="${doc.file_url}" target="_blank" onclick="event.stopPropagation();incViews('${doc.id}')" style="text-decoration:none">${ic('download',9)} Download</a>
+      </div>
+    </div>
+  </div>`;
+}
+
+function timeAgo(ts) {
+  const d = Math.floor((Date.now() - new Date(ts)) / 1000);
+  if(d<60) return 'just now';
+  if(d<3600) return Math.floor(d/60)+'m ago';
+  if(d<86400) return Math.floor(d/3600)+'h ago';
+  return Math.floor(d/86400)+'d ago';
+}
+
+async function incViews(id) {
+  await sb.rpc('increment_views', { doc_id: id });
+}
+
+// ── PAGINATED GRID ──
+function pgKey() { return `${S.page}:${S.tf}:${S.sort}:${S.search}`; }
+function getVis(k) { return PG[k] || PAGE_SIZE; }
+
+function paginatedGrid(docs, prefix) {
+  const key = `${prefix}:${pgKey()}`;
+  const vis = getVis(key);
+  const shown = docs.slice(0, vis);
+  const prevVis = vis - PAGE_SIZE;
+  const html = shown.map((d,i) => card(d, i >= prevVis && prevVis > 0)).join('');
+  let lm = '';
+  if(shown.length < docs.length) {
+    const rem = docs.length - shown.length;
+    lm = `<div class="load-more-wrap">
+      <div class="load-more-bar"></div>
+      <div class="load-more-info">Showing <strong>${shown.length}</strong> of <strong>${docs.length}</strong></div>
+      <button class="btn-load" id="lm_${key}" onclick="doLoadMore('${key}')">
+        ${ic('refresh',13)} Load ${Math.min(PAGE_SIZE,rem)} more
+      </button>
+    </div>`;
+  }
+  return `<div class="grid">${html}</div>${lm}`;
+}
+
+function doLoadMore(key) {
+  const btn = document.getElementById('lm_'+key);
+  if(btn){btn.classList.add('loading');btn.disabled=true;}
+  setTimeout(()=>{ PG[key]=(PG[key]||PAGE_SIZE)+PAGE_SIZE; buildCN(); }, 350);
+}
+
+// ── NAV ──
+function buildNav() {
+  const u = S.profile;
+  const ini = u ? (u.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() : '';
+  const right = u
+    ? `<button class="btn btna" onclick="openUp()">${ic('upload',12)} Upload</button>
+       <div class="av" onclick="goto('profile')" style="${u.avatar_url?'background:transparent':'background:#16a34a'}">
+         ${u.avatar_url?`<img src="${u.avatar_url}">`:`${ini}`}
+       </div>`
+    : `<button class="btn" onclick="openAuth()">Sign in</button>
+       <button class="btn btna" onclick="openAuth()">Get started</button>`;
+  document.getElementById('NV').innerHTML = `<nav class="nav">
+    <div class="logo" onclick="goto('home')">${LOGO_MARK}<span class="logo-word">Flo<span>der</span></span></div>
+    <div class="sw"><input class="sinp" placeholder="Search documents, authors, tags…" value="${S.search}" oninput="doSearch(this.value)" autocomplete="off"></div>
+    <div class="nr">${right}</div>
+  </nav>`;
+}
+
+// ── SIDEBAR ──
+function buildSB(counts) {
+  const sc = 0;
+  let h = [{n:'home',l:'Home'},{n:'trending',l:'Trending'},{n:'explore',l:'Explore'},{n:'bookmark',l:'Saved',p:'saved'}]
+    .map(x => {const p=x.p||x.n;return `<button class="si2 ${S.page===p?'on':''}" onclick="goto('${p}')">${ic(x.n,14)} <span>${x.l}</span></button>`;}).join('');
+  h += '<div class="ss">File type</div>';
+  [{ic:'file',l:'All files',f:'all'},{ic:'word',l:'Word',f:'word'},{ic:'excel',l:'Excel',f:'excel'},{ic:'ppt',l:'PowerPoint',f:'ppt'},{ic:'pdf',l:'PDF',f:'pdf'}].forEach(x => {
+    const on = S.tf===x.f && !['trending','explore','saved','profile','user'].includes(S.page);
+    h += `<button class="si2 ${on?'on':''}" onclick="setTF('${x.f}')">${ic(x.ic,14)} <span>${x.l}</span>${counts?`<span class="sbg">${counts[x.f]||0}</span>`:''}</button>`;
+  });
+  if(S.profile) {
+    h += '<div class="ss">Account</div>';
+    h += `<button class="si2 ${S.page==='profile'?'on':''}" onclick="goto('profile')">${ic('user',14)} <span>My Profile</span></button>`;
+    h += `<button class="si2" onclick="doLogout()">${ic('logout',14)} <span>Sign out</span></button>`;
+  }
+  return `<aside style="width:188px;flex-shrink:0;border-right:1px solid var(--bor);background:#fff;padding:14px 8px;min-height:calc(100vh - 54px)">${h}</aside>`;
+}
+
+function toolbar() {
+  const types = [{f:'all',l:'All'},{f:'word',l:'Word'},{f:'excel',l:'Excel'},{f:'ppt',l:'PowerPoint'},{f:'pdf',l:'PDF'}];
+  const sorts = [{v:'recent',l:'Recent'},{v:'views',l:'Most viewed'},{v:'likes',l:'Most liked'}];
+  const gid = 'sg'+(++suid);
+  return `<div class="toolbar">
+    <div class="type-pills">${types.map(t=>`<button class="tpill ${S.tf===t.f?'on':''}" onclick="setTF('${t.f}')">${t.l}</button>`).join('')}</div>
+    <div class="sort-seg">${sorts.map(s=>`<input type="radio" id="${gid}_${s.v}" name="${gid}" ${S.sort===s.v?'checked':''} onchange="setSort('${s.v}')"><label for="${gid}_${s.v}">${s.l}</label>`).join('')}</div>
+  </div>`;
+}
+
+// ── FETCH DOCS ──
+async function fetchDocs(filters={}) {
+  let q = sb.from('documents')
+    .select('*, profiles(id,name,avatar_url), likes(user_id), saves:document_saves(user_id), comments(id)')
+    .order('created_at', {ascending: false});
+  if(filters.type && filters.type !== 'all') q = q.eq('file_type', filters.type);
+  if(filters.search) q = q.ilike('title', `%${filters.search}%`);
+  if(filters.user_id) q = q.eq('user_id', filters.user_id);
+  const { data, error } = await q;
+  if(error) { console.error(error); return []; }
+  let docs = data || [];
+  if(filters.sort === 'views') docs.sort((a,b) => (b.views||0)-(a.views||0));
+  if(filters.sort === 'likes') docs.sort((a,b) => (b.likes?.length||0)-(a.likes?.length||0));
+  if(filters.saved && S.user) docs = docs.filter(d => (d.saves||[]).some(s=>s.user_id===S.user.id));
+  return docs;
+}
+
+// ── MAIN RENDER ──
+async function render() {
+  buildNav();
+  if(!S.profile && S.page !== 'home') S.page = 'home';
+  await buildApp();
+}
+
+async function buildApp() {
+  const app = document.getElementById('APP');
+  if(!S.profile) {
+    app.innerHTML = landingHTML();
+    return;
+  }
+  app.innerHTML = `<div style="display:flex"><div id="SB_WRAP"></div><div id="CN" style="flex:1;min-width:0;padding:20px 24px"></div></div>`;
+  const docs = await fetchDocs({ type: S.tf, search: S.search, sort: S.sort });
+  const counts = { all: docs.length };
+  ['word','excel','ppt','pdf'].forEach(t => counts[t] = docs.filter(d=>d.file_type===t).length);
+  document.getElementById('SB_WRAP').innerHTML = buildSB(counts);
+  const cn = document.getElementById('CN');
+  if(!cn) return;
+  if(S.page === 'profile') { cn.innerHTML = await profHTML(); return; }
+  if(S.page === 'user') { cn.innerHTML = await userHTML(S.vu); return; }
+  if(S.page === 'trending') {
+    const sorted = [...docs].sort((a,b)=>(b.views||0)-(a.views||0));
+    cn.innerHTML = `<div class="sec"><div class="sch">Trending — all time <small>${sorted.length}</small></div>${paginatedGrid(sorted,'trend')}</div>`;
+    return;
+  }
+  if(S.page === 'explore') {
+    let html = '';
+    for(const {k,l} of [{k:'word',l:'Word Documents'},{k:'excel',l:'Excel Spreadsheets'},{k:'ppt',l:'PowerPoint Presentations'},{k:'pdf',l:'PDF Documents'}]) {
+      const d = docs.filter(x=>x.file_type===k);
+      html += `<div class="sec"><div class="sch">${l} <small>${d.length}</small></div>${d.length?paginatedGrid(d,'expl-'+k):`<div class="emp">${ic('file',28)}<p>None yet.</p></div>`}</div>`;
+    }
+    cn.innerHTML = html;
+    return;
+  }
+  if(S.page === 'saved') {
+    const saved = docs.filter(d=>(d.saves||[]).some(s=>s.user_id===S.user.id));
+    cn.innerHTML = `<div class="sec"><div class="sch">Saved <small>${saved.length}</small></div>${saved.length?paginatedGrid(saved,'saved'): `<div class="emp">${ic('bookmark',28)}<p>Nothing saved yet.</p></div>`}</div>`;
+    return;
+  }
+  // Home
+  const trend = [...docs].sort((a,b)=>(b.views||0)-(a.views||0));
+  let html = toolbar();
+  if(S.tf==='all' && !S.search) {
+    html += `<div class="sec"><div class="sch">Trending this week <small>${trend.length}</small></div>${paginatedGrid(trend,'trend-home')}</div>`;
+  }
+  html += `<div class="sec"><div class="sch">${S.search?'Search results':S.tf==='all'?'Recent uploads':'Filtered results'} <small>${docs.length}</small></div>${docs.length?paginatedGrid(docs,'rec'):`<div class="emp">${ic('file',28)}<p>No documents yet. Be the first to upload!</p></div>`}</div>`;
+  cn.innerHTML = html;
+}
+
+// ── LANDING ──
+function landingHTML() {
+  return `<div style="display:flex"><div style="width:188px;flex-shrink:0;border-right:1px solid var(--bor);background:#fff;min-height:calc(100vh - 54px)"></div>
+  <div class="landing">
+    <div style="font-size:40px;margin-bottom:16px">${LOGO_MARK}</div>
+    <h1>Share documents.<br>Find what <span>matters</span>.</h1>
+    <p>Floder is the home for professional documents. Upload, discover and download Word, Excel, PowerPoint and PDF files shared by your community.</p>
+    <div class="landing-btns">
+      <button class="btn btna" style="padding:10px 24px;font-size:13px" onclick="openAuth()">Get started — it's free</button>
+      <button class="btn" style="padding:10px 24px;font-size:13px" onclick="openAuth()">Sign in</button>
+    </div>
+    <div class="feat">
+      <div class="feat-card"><div class="feat-icon">${ic('upload',16)}</div><div class="feat-t">Upload any format</div><div class="feat-d">Word, Excel, PowerPoint, PDF — all supported.</div></div>
+      <div class="feat-card"><div class="feat-icon">${ic('eye',16)}</div><div class="feat-t">Discover documents</div><div class="feat-d">Browse trending files from your community.</div></div>
+      <div class="feat-card"><div class="feat-icon">${ic('bookmark',16)}</div><div class="feat-t">Save for later</div><div class="feat-d">Build your personal library of useful docs.</div></div>
+    </div>
+  </div></div>`;
+}
+
+// ── PROFILE PAGES ──
+async function profHTML() {
+  const u = S.profile;
+  const docs = await fetchDocs({ user_id: u.id });
+  const tv = docs.reduce((a,d)=>a+(d.views||0),0);
+  const tl = docs.reduce((a,d)=>a+(d.likes?.length||0),0);
+  const ini = (u.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  return `<div class="pco"></div><div class="pca">
+    <div class="pav" style="${u.avatar_url?'background:transparent':'background:#16a34a'}">${u.avatar_url?`<img src="${u.avatar_url}">`:`${ini}`}</div>
+    <div style="font-size:15px;font-weight:700;margin-bottom:2px">${u.name||'—'}</div>
+    <div style="font-size:11.5px;color:var(--tx3);margin-bottom:7px">${u.email}</div>
+    ${u.bio?`<div style="font-size:12.5px;color:var(--tx2);margin-bottom:9px;line-height:1.5">${u.bio}</div>`:''}
+    <button class="btn" onclick="openEditP()" style="font-size:11px">${ic('edit',11)} Edit profile</button>
+  </div>
+  <div class="str">
+    <div class="stb"><div class="stn">${docs.length}</div><div class="stl">Uploaded</div></div>
+    <div class="stb"><div class="stn">${tv.toLocaleString()}</div><div class="stl">Total views</div></div>
+    <div class="stb"><div class="stn">${tl}</div><div class="stl">Likes received</div></div>
+  </div>
+  ${docs.length?`<div class="sec"><div class="sch">My documents <small>${docs.length}</small></div>${paginatedGrid(docs,'prof')}</div>`:`<div class="emp">${ic('upload',28)}<p>No documents yet.</p><br><button class="btn btna" onclick="openUp()">${ic('upload',12)} Upload your first</button></div>`}`;
+}
+
+async function userHTML(uid) {
+  const { data: u } = await sb.from('profiles').select('*').eq('id', uid).single();
+  if(!u) return `<div class="emp"><p>User not found.</p></div>`;
+  const docs = await fetchDocs({ user_id: uid });
+  const tv = docs.reduce((a,d)=>a+(d.views||0),0);
+  const tl = docs.reduce((a,d)=>a+(d.likes?.length||0),0);
+  const ini = (u.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  return `<div class="pco"></div><div class="pca">
+    <div class="pav" style="${u.avatar_url?'background:transparent':'background:#16a34a'}">${u.avatar_url?`<img src="${u.avatar_url}">`:`${ini}`}</div>
+    <div style="font-size:15px;font-weight:700;margin-bottom:2px">${u.name||'—'}</div>
+    <div style="font-size:11.5px;color:var(--tx3);margin-bottom:7px">${u.email}</div>
+    ${u.bio?`<div style="font-size:12.5px;color:var(--tx2);line-height:1.5">${u.bio}</div>`:''}
+  </div>
+  <div class="str">
+    <div class="stb"><div class="stn">${docs.length}</div><div class="stl">Documents</div></div>
+    <div class="stb"><div class="stn">${tv.toLocaleString()}</div><div class="stl">Total views</div></div>
+    <div class="stb"><div class="stn">${tl}</div><div class="stl">Likes</div></div>
+  </div>
+  ${docs.length?`<div class="sec"><div class="sch">By ${u.name} <small>${docs.length}</small></div>${paginatedGrid(docs,'user-'+uid)}</div>`:`<div class="emp"><p>No documents yet.</p></div>`}`;
+}
+
+// ── OPEN DOC MODAL ──
+async function openDoc(id) {
+  closeM();
+  await incViews(id);
+  const { data: doc } = await sb.from('documents')
+    .select('*, profiles(id,name,avatar_url), likes(user_id), saves:document_saves(user_id), comments(id,content,created_at,profiles(id,name,avatar_url))')
+    .eq('id', id).single();
+  if(!doc) return;
+  const p = doc.profiles || {};
+  const ini = (p.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const liked = S.user && (doc.likes||[]).some(l=>l.user_id===S.user.id);
+  const saved = S.user && (doc.saves||[]).some(s=>s.user_id===S.user.id);
+  const cmts = (doc.comments||[]).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).map(c=>{
+    const cp=c.profiles||{};
+    const ci=(cp.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    return `<div class="cmt">
+      <div class="cav3" style="${cp.avatar_url?'background:transparent':'background:#16a34a'}">${cp.avatar_url?`<img src="${cp.avatar_url}">`:`${ci}`}</div>
+      <div class="cmb"><div class="cmh"><span class="cmn" onclick="closeM();goUser('${c.profiles?.id}')">${cp.name||'?'}</span><span class="cmt2">${timeAgo(c.created_at)}</span></div>
+      <p class="cmtx">${c.content}</p></div>
+    </div>`;
+  }).join('');
+  const inr = S.user
+    ? `<div class="cir">${avEl(S.profile,24)}<input id="CMT" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')postCmt('${id}')"><button class="btn btna" onclick="postCmt('${id}')" style="flex-shrink:0;padding:5px 10px;font-size:11.5px">${ic('comment',11)} Post</button></div>`
+    : `<div style="margin-top:9px;padding:9px;background:var(--acb);border-radius:7px;font-size:11.5px;color:var(--ac);cursor:pointer" onclick="openAuth()">Sign in to comment →</div>`;
+  document.body.insertAdjacentHTML('beforeend', `<div class="ov" onclick="closeM()"><div class="mo" onclick="event.stopPropagation()">
+    <div class="moh">
+      <div class="moi mi${doc.file_type}">${thumb(doc.file_type)}</div>
+      <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700;line-height:1.35;margin-bottom:3px">${doc.title}</div>
+      <div style="font-size:10.5px;color:var(--tx3)">${ftOf(doc.file_type)} · ${(doc.views||0).toLocaleString()} views</div></div>
+      <button class="mox" onclick="closeM()">${ic('close',14)}</button>
+    </div>
+    <div class="mob">
+      <div class="ubdg" onclick="closeM();goUser('${doc.user_id}')">
+        <div class="cav3" style="${p.avatar_url?'background:transparent':'background:#16a34a'}">${p.avatar_url?`<img src="${p.avatar_url}">`:`${ini}`}</div>
+        <div><div style="font-size:12.5px;font-weight:600">${p.name||'Unknown'}</div><div style="font-size:10.5px;color:var(--tx3)">${timeAgo(doc.created_at)}</div></div>
+        <span style="margin-left:auto;font-size:11px;color:var(--ac);font-weight:500">View profile →</span>
+      </div>
+      ${doc.description?`<p style="font-size:12.5px;color:var(--tx2);margin-bottom:9px;line-height:1.5">${doc.description}</p>`:''}
+      ${doc.tags?.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:11px">${doc.tags.map(t=>`<span style="background:var(--acb);color:var(--ac);font-size:10px;font-weight:500;padding:2px 7px;border-radius:7px">${t}</span>`).join('')}</div>`:''}
+      <div class="pra"><div class="prl">Preview</div>${thumb(doc.file_type)}</div>
+      <div class="ma2">
+        <button class="ma${liked?' lk':''}" id="like_btn" onclick="doLike('${id}',${liked})">${ic('heart',12)} ${liked?'Liked':'Like'} · ${doc.likes?.length||0}</button>
+        <button class="ma${saved?' sv2':''}" id="save_btn" onclick="doSaveDoc('${id}',${saved})">${ic('savi',12)} ${saved?'Saved':'Save'}</button>
+        <a class="ma madl" href="${doc.file_url}" target="_blank" onclick="incViews('${id}')" style="text-decoration:none">${ic('download',12)} Download .${extOf(doc.file_type)}</a>
+      </div>
+      <div class="dvd"></div>
+      <div style="font-size:11.5px;font-weight:600;margin-bottom:9px">${ic('comment',12)} Comments (${doc.comments?.length||0})</div>
+      ${cmts||`<div class="emp" style="padding:12px 0">${ic('comment',24)}<p>No comments yet.</p></div>`}
+      ${inr}
+    </div>
+  </div></div>`);
+}
+
+// ── ACTIONS ──
+async function doLike(docId, isLiked) {
+  if(!S.user){toast('Sign in to like.',false);return;}
+  if(isLiked) {
+    await sb.from('likes').delete().eq('user_id',S.user.id).eq('document_id',docId);
+  } else {
+    await sb.from('likes').insert({user_id:S.user.id,document_id:docId});
+  }
+  closeM(); openDoc(docId); buildCN_soft();
+}
+
+async function doSaveDoc(docId, isSaved) {
+  if(!S.user){toast('Sign in to save.',false);return;}
+  if(isSaved) {
+    await sb.from('document_saves').delete().eq('user_id',S.user.id).eq('document_id',docId);
+    toast('Removed.',true);
+  } else {
+    await sb.from('document_saves').insert({user_id:S.user.id,document_id:docId});
+    toast('Saved!',true);
+  }
+  closeM(); openDoc(docId); buildCN_soft();
+}
+
+async function doSave(e, docId) {
+  e.stopPropagation();
+  if(!S.user){toast('Sign in to save.',false);return;}
+  const { data } = await sb.from('document_saves').select('id').eq('user_id',S.user.id).eq('document_id',docId).single();
+  if(data) {
+    await sb.from('document_saves').delete().eq('id',data.id);
+    toast('Removed.',true);
+  } else {
+    await sb.from('document_saves').insert({user_id:S.user.id,document_id:docId});
+    toast('Saved!',true);
+  }
+  buildCN_soft();
+}
+
+async function postCmt(docId) {
+  const inp = document.getElementById('CMT');
+  if(!inp||!inp.value.trim()) return;
+  await sb.from('comments').insert({user_id:S.user.id,document_id:docId,content:inp.value.trim()});
+  toast('Comment posted!',true);
+  closeM(); openDoc(docId);
+}
+
+async function buildCN_soft() { await buildApp(); }
+
+function closeM() { const o=document.querySelector('.ov');if(o)o.remove(); }
+
+// ── AUTH ──
+function openAuth() {
+  closeM();
+  document.body.insertAdjacentHTML('beforeend', `<div class="ov" onclick="closeM()"><div class="mo" onclick="event.stopPropagation()" style="max-width:360px">
+    <div class="mob" style="padding:24px 22px">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="margin-bottom:10px">${LOGO_MARK}</div>
+        <div style="font-size:17px;font-weight:800;margin-bottom:3px">Welcome to Floder</div>
+        <div style="font-size:12px;color:var(--tx3)">Sign in or create your free account</div>
+      </div>
+      <button class="bts" onclick="loginGoogle()">
+        <img src="https://www.google.com/favicon.ico" style="width:16px;height:16px"> Continue with Google
+      </button>
+      <div class="adv"><div class="adv-l"></div><span>or continue with email</span><div class="adv-l"></div></div>
+      <div id="AUTH_TABS">
+        <div class="atb"><button class="att on" id="tab_in" onclick="switchTab('in')">Sign in</button><button class="att" id="tab_up" onclick="switchTab('up')">Register</button></div>
+        <div id="AUTH_FORM"></div>
+      </div>
+    </div>
+  </div></div>`);
+  switchTab('in');
+}
+
+function switchTab(t) {
+  document.getElementById('tab_in').className='att'+(t==='in'?' on':'');
+  document.getElementById('tab_up').className='att'+(t==='up'?' on':'');
+  document.getElementById('AUTH_FORM').innerHTML = t==='in'
+    ? `<div class="fl"><label>Email</label><input id="AE" type="email" placeholder="you@example.com"></div>
+       <div class="fl"><label>Password</label><input id="AP" type="password" placeholder="••••••••"></div>
+       <button class="btn btna" style="width:100%;padding:9px;font-size:13px;margin-top:4px" onclick="doLogin()">Sign in</button>`
+    : `<div class="fl"><label>Full name</label><input id="AN" type="text" placeholder="Jane Smith"></div>
+       <div class="fl"><label>Email</label><input id="AE" type="email" placeholder="you@example.com"></div>
+       <div class="fl"><label>Password</label><input id="AP" type="password" placeholder="Min. 8 characters"></div>
+       <div class="fl"><label>Bio <span style="color:var(--tx3);font-weight:400">(optional)</span></label><input id="AB" type="text" placeholder="Tell the community about yourself…"></div>
+       <button class="btn btna" style="width:100%;padding:9px;font-size:13px;margin-top:4px" onclick="doRegister()">Create account</button>`;
+}
+
+async function loginGoogle() {
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin }
+  });
+  if(error) toast(error.message, false);
+}
+
+async function doLogin() {
+  const e=document.getElementById('AE')?.value||'';
+  const p=document.getElementById('AP')?.value||'';
+  if(!e||!p){toast('Fill all fields.',false);return;}
+  const {error}=await sb.auth.signInWithPassword({email:e,password:p});
+  if(error){toast(error.message,false);return;}
+  closeM(); toast('Welcome back!',true);
+}
+
+async function doRegister() {
+  const n=document.getElementById('AN')?.value||'';
+  const e=document.getElementById('AE')?.value||'';
+  const p=document.getElementById('AP')?.value||'';
+  const b=document.getElementById('AB')?.value||'';
+  if(!n||!e||!p){toast('Fill all fields.',false);return;}
+  const {error}=await sb.auth.signUp({email:e,password:p,options:{data:{full_name:n}}});
+  if(error){toast(error.message,false);return;}
+  if(b) await sb.from('profiles').update({bio:b}).eq('email',e);
+  closeM(); toast('Account created! Check your email to confirm.',true);
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  S.user=null; S.profile=null; S.page='home';
+  toast('Signed out.');
+  render();
+}
+
+// ── UPLOAD ──
+function openUp() {
+  if(!S.user){openAuth();return;}
+  S.tags=[];S.uploadType='word';
+  document.body.insertAdjacentHTML('beforeend', `<div class="ov" onclick="closeM()"><div class="mo" onclick="event.stopPropagation()" style="max-width:440px">
+    <div class="moh"><div style="font-weight:700;font-size:13px;display:flex;align-items:center;gap:6px">${ic('upload',13)} Upload a document</div><button class="mox" onclick="closeM()">${ic('close',14)}</button></div>
+    <div class="mob">
+      <input type="file" id="FILE_INPUT" accept=".docx,.xlsx,.pptx,.pdf" onchange="fileChosen(this)">
+      <div class="drp" id="DRZ" onclick="document.getElementById('FILE_INPUT').click()"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="event.preventDefault();this.classList.remove('drag');fileChosen({files:event.dataTransfer.files})">
+        ${ic('upload',24,'display:block;margin:0 auto 6px;stroke:var(--tx3)')}
+        <p id="DRL"><strong>Click to select</strong> or drag & drop</p>
+        <div class="ht">.docx · .xlsx · .pptx · .pdf — max 50MB</div>
+      </div>
+      <div class="fl"><label>Title *</label><input id="UPT" type="text" placeholder="E.g. Annual Sales Report 2025"></div>
+      <div class="fl"><label>Description</label><textarea id="UPD" placeholder="Briefly describe the document…"></textarea></div>
+      <div class="fl"><label>Tags</label>
+        <div class="tag-wrap" onclick="document.getElementById('TGI').focus()">
+          <div id="TGC"></div>
+          <input id="TGI" class="tag-inp" placeholder="Type and press Enter…" onkeydown="handleTag(event)">
+        </div>
+        <div class="fh">Press Enter or comma to add a tag</div>
+      </div>
+      <div id="UP_PROG" style="display:none"><div class="prog"><div class="prog-bar" id="PROG_BAR" style="width:0%"></div></div><div style="font-size:10.5px;color:var(--tx3);margin-top:4px" id="PROG_TXT">Uploading…</div></div>
+      <button class="btn btna" style="width:100%;padding:8px;font-size:13px;margin-top:4px" id="UP_BTN" onclick="doUpload()">Publish document</button>
+    </div>
+  </div></div>`);
+}
+
+let selectedFile = null;
+function fileChosen(inp) {
+  const files = inp.files;
+  if(!files||!files.length) return;
+  const f = files[0];
+  selectedFile = f;
+  const ext = f.name.split('.').pop().toLowerCase();
+  const typeMap = {docx:'word',xlsx:'excel',pptx:'ppt',pdf:'pdf'};
+  S.uploadType = typeMap[ext] || 'word';
+  document.getElementById('DRL').innerHTML = `<strong>${f.name}</strong> (${(f.size/1024/1024).toFixed(1)} MB)`;
+  document.getElementById('DRZ').classList.add('ok');
+  const t = document.getElementById('UPT');
+  if(t&&!t.value) t.value = f.name.replace(/\.(docx|xlsx|pptx|pdf)$/i,'');
+}
+
+function handleTag(e) {
+  if(e.key==='Enter'||e.key===','){
+    e.preventDefault();
+    const v=e.target.value.trim().replace(/,/g,'').toLowerCase();
+    if(v&&!S.tags.includes(v)){S.tags.push(v);e.target.value='';rTags();}
+  }
+}
+function removeTag(t){S.tags=S.tags.filter(x=>x!==t);rTags();}
+function rTags(){const el=document.getElementById('TGC');if(el)el.innerHTML=S.tags.map(t=>`<span class="tag-chip">${t}<button onclick="removeTag('${t}')">×</button></span>`).join('');}
+
+async function doUpload() {
+  const title = document.getElementById('UPT')?.value?.trim()||'';
+  const desc = document.getElementById('UPD')?.value?.trim()||'';
+  if(!title){toast('Please add a title.',false);return;}
+  if(!selectedFile){toast('Please select a file.',false);return;}
+  const btn = document.getElementById('UP_BTN');
+  const prog = document.getElementById('UP_PROG');
+  btn.disabled=true;btn.textContent='Uploading…';
+  prog.style.display='block';
+  const bar = document.getElementById('PROG_BAR');
+  const txt = document.getElementById('PROG_TXT');
+  // Upload file to Supabase Storage
+  const fileName = `${S.user.id}/${Date.now()}_${selectedFile.name}`;
+  bar.style.width='30%';txt.textContent='Uploading file…';
+  const { data: fileData, error: fileErr } = await sb.storage.from('documents').upload(fileName, selectedFile, {contentType: selectedFile.type});
+  if(fileErr){toast('Upload failed: '+fileErr.message,false);btn.disabled=false;btn.textContent='Publish document';return;}
+  bar.style.width='70%';txt.textContent='Saving metadata…';
+  const { data: urlData } = sb.storage.from('documents').getPublicUrl(fileName);
+  const { error: dbErr } = await sb.from('documents').insert({
+    title, description: desc, file_type: S.uploadType,
+    file_url: urlData.publicUrl, file_name: selectedFile.name,
+    tags: S.tags, user_id: S.user.id
+  });
+  if(dbErr){toast('Error saving document.',false);btn.disabled=false;return;}
+  bar.style.width='100%';txt.textContent='Done!';
+  selectedFile=null;S.tags=[];
+  setTimeout(()=>{closeM();toast('Published!',true);S.page='home';render();},400);
+}
+
+// ── EDIT PROFILE ──
+function openEditP() {
+  const u = S.profile;
+  document.body.insertAdjacentHTML('beforeend', `<div class="ov" onclick="closeM()"><div class="mo" onclick="event.stopPropagation()" style="max-width:360px">
+    <div class="moh"><div style="font-weight:700;font-size:13px">${ic('edit',13)} Edit profile</div><button class="mox" onclick="closeM()">${ic('close',14)}</button></div>
+    <div class="mob">
+      <div class="fl"><label>Full name</label><input id="EN" type="text" value="${u.name||''}"></div>
+      <div class="fl"><label>Bio</label><textarea id="EB">${u.bio||''}</textarea></div>
+      <button class="btn btna" style="width:100%;padding:8px;font-size:13px" onclick="saveProfile()">Save changes</button>
+    </div>
+  </div></div>`);
+}
+
+async function saveProfile() {
+  const name = document.getElementById('EN')?.value||'';
+  const bio = document.getElementById('EB')?.value||'';
+  const { error } = await sb.from('profiles').update({name,bio}).eq('id',S.user.id);
+  if(error){toast('Error saving.',false);return;}
+  S.profile = {...S.profile,name,bio};
+  closeM(); toast('Profile updated!',true); render();
+}
+
+// ── NAVIGATION ──
+function goto(p){S.page=p;S.vu=null;S.search='';render();}
+function setTF(f){S.tf=f;if(!['home','trending','explore'].includes(S.page))S.page='home';render();}
+function setSort(v){S.sort=v;render();}
+function doSearch(v){S.search=v;S.page='home';render();}
+function goUser(uid){
+  if(S.user&&uid===S.user.id){goto('profile');return;}
+  S.page='user';S.vu=uid;render();
+}
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM();});
+
+// ── START ──
+init();
+</script>
+</body>
+</html>
