@@ -94,13 +94,32 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 .sort-seg label{padding:4px 11px;border-radius:6px;font-size:11.5px;font-weight:500;color:var(--tx3);cursor:pointer;white-space:nowrap;user-select:none}
 .sort-seg label:hover{color:var(--tx2)}
 .sort-seg input[type=radio]:checked + label{background:#fff;color:var(--tx);font-weight:600;box-shadow:var(--sh)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
-.card{background:#fff;border:1px solid var(--bor);border-radius:11px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:.15s}
-.card:hover{border-color:var(--bor2);box-shadow:var(--sh2);transform:translateY(-2px)}
-.cth{height:130px;position:relative;display:flex;align-items:center;justify-content:center;padding:10px 12px;flex-shrink:0;overflow:hidden}
-.cth-word{background:var(--wb)}.cth-excel{background:var(--eb)}.cth-ppt{background:var(--pb)}.cth-pdf{background:var(--db)}
-.cbdg{position:absolute;top:7px;left:7px;font-size:9px;font-weight:700;letter-spacing:.4px;padding:2px 6px;border-radius:4px;color:#fff;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.card{background:#fff;border:none;border-radius:0;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:.15s}
+.card:hover .cth{opacity:.9}
+.card:hover .ctitle{color:var(--ac)}
+.cth{height:190px;position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;border-radius:10px;background:#e8e8e8}
+.cth-word{background:#dce8f7}.cth-excel{background:#d8f0e4}.cth-ppt{background:#fde8e0}.cth-pdf{background:#fde0e0}
+.cbdg{position:absolute;top:8px;left:8px;font-size:9px;font-weight:700;letter-spacing:.4px;padding:3px 7px;border-radius:5px;color:#fff;text-transform:uppercase;z-index:2}
 .bdg-word{background:var(--wc)}.bdg-excel{background:var(--ec)}.bdg-ppt{background:var(--pc)}.bdg-pdf{background:var(--dc)}
+.cb{padding:10px 2px 8px;display:flex;flex-direction:column;flex:1}
+.ctitle{font-size:13.5px;font-weight:600;color:var(--tx);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:6px;min-height:36px}
+.cauth{display:flex;align-items:center;gap:6px;margin-bottom:4px;cursor:pointer;width:fit-content}
+.cauth:hover .can{color:var(--ac)}
+.cav2{width:20px;height:20px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:#fff;flex-shrink:0}
+.cav2 img{width:100%;height:100%;object-fit:cover}
+.can{font-size:12px;color:var(--tx2);font-weight:500}
+.cm{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--tx3);margin-bottom:8px}
+.cm svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;flex-shrink:0}
+.cdot{width:3px;height:3px;border-radius:50%;background:var(--tx3);flex-shrink:0}
+.cf{display:flex;gap:5px;margin-top:auto}
+.cfb{flex:1;display:flex;align-items:center;justify-content:center;gap:3px;height:28px;border-radius:7px;border:1px solid var(--bor);background:transparent;color:var(--tx2);font-size:10px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;overflow:hidden;padding:0 6px;transition:.1s}
+.cfb svg{width:10px;height:10px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;flex-shrink:0}
+.cfb:hover{background:var(--sur2);border-color:var(--bor2)}
+.cfb.sv{color:var(--ac);border-color:var(--ac);background:var(--acb)}
+.cfd{background:var(--ac);border-color:var(--ac);color:#fff}
+.cfd svg{stroke:#fff}
+.cfd:hover{background:var(--ach)}
 .pw{width:78px;height:104px;background:#fff;border-radius:3px;box-shadow:0 2px 8px rgba(0,0,0,.12);padding:8px 7px;display:flex;flex-direction:column}
 .pwt{height:5px;background:var(--wc);border-radius:2px;width:70%;margin-bottom:6px;opacity:.85}
 .pwl{height:2.5px;background:var(--wc);border-radius:1px;margin-bottom:3px}
@@ -367,13 +386,11 @@ function card(doc, animated=false) {
   const liked = S.user && (doc.likes||[]).some(l=>l.user_id===S.user.id);
   const saved = S.user && (doc.saves||[]).some(l=>l.user_id===S.user.id);
   return `<div class="card${animated?' card-enter':''}" onclick="openDoc('${doc.id}')">
-    <div class="cth cth-${doc.file_type}" style="position:relative;overflow:hidden;cursor:pointer">
+    <div class="cth cth-${doc.file_type}">
       <span class="cbdg bdg-${doc.file_type}">${bdgOf(doc.file_type)}</span>
-      <iframe 
-        src="https://docs.google.com/viewer?url=${encodeURIComponent(doc.file_url)}&embedded=true"
-        style="width:100%;height:100%;border:none;position:absolute;top:0;left:0;pointer-events:none"
-        loading="lazy">
-      </iframe>
+      <div class="lazy-preview" data-url="${doc.file_url}" style="width:100%;height:100%;position:absolute;top:0;left:0;display:flex;align-items:center;justify-content:center">
+        ${thumb(doc.file_type)}
+      </div>
     </div>
     <div class="cb">
       <div class="ctitle">${doc.title}</div>
@@ -501,6 +518,7 @@ async function render() {
   buildNav();
 
   await buildApp();
+  setTimeout(initLazyPreviews, 100);
 }
 
 async function buildApp() {
@@ -724,7 +742,7 @@ async function deleteDoc(e, docId) {
   toast('Document deleted.', true);
   await buildApp();
 }
-async function buildCN_soft() { await buildApp(); }
+async function buildCN_soft() { await buildApp(); initLazyPreviews(); }
 
 function closeM() { const o=document.querySelector('.ov');if(o)o.remove(); }
 
@@ -919,6 +937,29 @@ function goUser(uid){
 }
 
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM();});
+
+// ── LAZY PREVIEW ──
+function initLazyPreviews() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(el => {
+      if(el.isIntersecting) {
+        const div = el.target;
+        const url = div.dataset.url;
+        if(url && !div.dataset.loaded) {
+          div.dataset.loaded = '1';
+          const iframe = document.createElement('iframe');
+          iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+          iframe.style.cssText = 'width:100%;height:100%;border:none;position:absolute;top:0;left:0;pointer-events:none';
+          iframe.loading = 'lazy';
+          div.appendChild(iframe);
+          observer.unobserve(div);
+        }
+      }
+    });
+  }, { rootMargin: '100px', threshold: 0.1 });
+
+  document.querySelectorAll('.lazy-preview').forEach(el => observer.observe(el));
+}
 
 // ── START ──
 init();
