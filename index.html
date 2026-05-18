@@ -947,17 +947,22 @@ function initLazyPreviews() {
         const url = div.dataset.url;
         if(url && !div.dataset.loaded) {
           div.dataset.loaded = '1';
+          const bg = getComputedStyle(div.parentElement).backgroundColor || '#f0ede8';
           const wrap = document.createElement('div');
           wrap.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;border-radius:10px';
+          
           const iframe = document.createElement('iframe');
           iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-          iframe.style.cssText = 'width:166%;height:166%;border:none;transform:scale(0.6);transform-origin:top left;pointer-events:none';
+          // Scale down to 45% so we see the full page
+          iframe.style.cssText = 'width:222%;height:222%;border:none;transform:scale(0.45);transform-origin:top left;pointer-events:none;display:block';
           iframe.loading = 'lazy';
           wrap.appendChild(iframe);
-          // overlay to block controls
-          const overlay = document.createElement('div');
-          overlay.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:48px;background:inherit;z-index:2';
-          wrap.appendChild(overlay);
+          
+          // White bar at bottom to hide Google's toolbar
+          const bar = document.createElement('div');
+          bar.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:52px;background:#1a1a1a;z-index:10';
+          wrap.appendChild(bar);
+          
           div.innerHTML = '';
           div.appendChild(wrap);
           observer.unobserve(div);
