@@ -552,7 +552,7 @@ async function buildApp() {
   const app = document.getElementById('APP');
   // Document page - full layout, no sidebar
   if(S.page === 'doc' && S.docId) {
-    app.innerHTML = `<div id="DOC_PAGE" style="min-height:100vh"></div>`;
+    app.innerHTML = `<div id="DOC_PAGE"></div>`;
     await buildDocPage(S.docId);
     return;
   }
@@ -715,7 +715,7 @@ async function buildDocPage(id) {
   container.innerHTML = `
   <div style="display:grid;grid-template-columns:2.4fr 1fr;min-height:calc(100vh - 54px)" id="DP_GRID">
     
-    <div style="background:#2a2a2a;padding:32px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 54px)">
+    <div style="background:#2a2a2a;padding:40px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 54px)">
       <div id="DP_VIEWER" style="background:#fff;${isHoriz?'width:min(960px,95%);aspect-ratio:16/9':'width:min(620px,90%);aspect-ratio:8.5/11'};box-shadow:0 8px 40px rgba(0,0,0,0.4);border-radius:4px;overflow:hidden;position:relative">
       </div>
       <div style="margin-top:18px;font-size:11.5px;color:rgba(255,255,255,0.5);text-align:center">
