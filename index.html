@@ -52,6 +52,12 @@
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="apple-touch-icon" href="/favicon.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.js"></script>
+<script>
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js';
+  }
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -390,7 +396,7 @@ function card(doc, animated=false) {
   return `<div class="card${animated?' card-enter':''}" onclick="openDoc('${doc.id}')">
     <div class="cth cth-${doc.file_type}">
       <span class="cbdg bdg-${doc.file_type}">${bdgOf(doc.file_type)}</span>
-      <div class="lazy-preview" data-url="${doc.file_url}" style="width:100%;height:100%;position:absolute;top:0;left:0;display:flex;align-items:center;justify-content:center">
+      <div class="lazy-preview" data-url="${doc.file_url}" data-ftype="${doc.file_type}" style="width:100%;height:100%;position:absolute;top:0;left:0;display:flex;align-items:center;justify-content:center">
         ${thumb(doc.file_type)}
       </div>
     </div>
@@ -947,26 +953,14 @@ function initLazyPreviews() {
       if(el.isIntersecting) {
         const div = el.target;
         const url = div.dataset.url;
+        const ftype = div.dataset.ftype;
         if(url && !div.dataset.loaded) {
           div.dataset.loaded = '1';
-          const bg = getComputedStyle(div.parentElement).backgroundColor || '#f0ede8';
-          const wrap = document.createElement('div');
-          wrap.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;border-radius:10px';
-          
-          const iframe = document.createElement('iframe');
-          iframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-          // Scale down to 45% so we see the full page
-          iframe.style.cssText = 'width:222%;height:222%;border:none;transform:scale(0.45);transform-origin:top left;pointer-events:none;display:block';
-          iframe.loading = 'lazy';
-          wrap.appendChild(iframe);
-          
-          // White bar at bottom to hide Google's toolbar
-          const bar = document.createElement('div');
-          bar.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:52px;background:#1a1a1a;z-index:10';
-          wrap.appendChild(bar);
-          
-          div.innerHTML = '';
-          div.appendChild(wrap);
+          if(ftype === 'pdf') {
+            renderPdfThumbnail(div, url);
+          } else {
+            renderStyledCard(div, ftype);
+          }
           observer.unobserve(div);
         }
       }
@@ -974,6 +968,46 @@ function initLazyPreviews() {
   }, { rootMargin: '150px', threshold: 0.05 });
 
   document.querySelectorAll('.lazy-preview').forEach(el => observer.observe(el));
+}
+
+async function renderPdfThumbnail(container, url) {
+  try {
+    if(!window.pdfjsLib) { renderStyledCard(container, 'pdf'); return; }
+    const loadingTask = pdfjsLib.getDocument({ url: url, disableRange: true, disableStream: true });
+    const pdf = await loadingTask.promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 1 });
+    const targetWidth = 400;
+    const scale = targetWidth / viewport.width;
+    const scaledViewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = scaledViewport.width;
+    canvas.height = scaledViewport.height;
+    canvas.style.cssText = 'width:100%;height:100%;object-fit:cover;object-position:top;border-radius:10px;display:block';
+    await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+    container.innerHTML = '';
+    container.appendChild(canvas);
+  } catch(err) {
+    renderStyledCard(container, 'pdf');
+  }
+}
+
+function renderStyledCard(container, ftype) {
+  const config = {
+    word:  { bg:'linear-gradient(135deg,#3a6bb5 0%,#1e3d6b 100%)', icon:'W', label:'WORD' },
+    excel: { bg:'linear-gradient(135deg,#1a9655 0%,#0a5a2f 100%)', icon:'X', label:'EXCEL' },
+    ppt:   { bg:'linear-gradient(135deg,#d85530 0%,#8e2c14 100%)', icon:'P', label:'POWERPOINT' },
+    pdf:   { bg:'linear-gradient(135deg,#d12b2b 0%,#7f1414 100%)', icon:'P', label:'PDF' }
+  };
+  const c = config[ftype] || config.pdf;
+  container.innerHTML = `
+    <div style="width:100%;height:100%;background:${c.bg};border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">
+      <div style="position:absolute;inset:0;background:radial-gradient(circle at 30% 20%, rgba(255,255,255,0.12), transparent 50%)"></div>
+      <div style="font-size:96px;font-weight:900;color:rgba(255,255,255,0.95);font-family:-apple-system,BlinkMacSystemFont,sans-serif;letter-spacing:-3px;text-shadow:0 4px 24px rgba(0,0,0,0.2);position:relative">${c.icon}</div>
+      <div style="position:absolute;bottom:14px;left:16px;font-size:10px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.55)">${c.label}</div>
+    </div>
+  `;
 }
 
 // ── START ──
