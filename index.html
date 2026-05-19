@@ -972,7 +972,11 @@ function initLazyPreviews() {
 
 async function renderPdfThumbnail(container, url) {
   try {
-    if(!window.pdfjsLib) { renderStyledCard(container, 'pdf'); return; }
+    if(!window.pdfjsLib) { 
+      console.warn('[FileSilver] PDF.js non caricato, fallback card');
+      renderStyledCard(container, 'pdf'); 
+      return; 
+    }
     const loadingTask = pdfjsLib.getDocument({ url: url, disableRange: true, disableStream: true });
     const pdf = await loadingTask.promise;
     const page = await pdf.getPage(1);
@@ -989,23 +993,23 @@ async function renderPdfThumbnail(container, url) {
     container.innerHTML = '';
     container.appendChild(canvas);
   } catch(err) {
+    console.warn('[FileSilver] PDF preview failed for', url, '→', err.message || err);
     renderStyledCard(container, 'pdf');
   }
 }
 
 function renderStyledCard(container, ftype) {
   const config = {
-    word:  { bg:'linear-gradient(135deg,#3a6bb5 0%,#1e3d6b 100%)', icon:'W', label:'WORD' },
-    excel: { bg:'linear-gradient(135deg,#1a9655 0%,#0a5a2f 100%)', icon:'X', label:'EXCEL' },
-    ppt:   { bg:'linear-gradient(135deg,#d85530 0%,#8e2c14 100%)', icon:'P', label:'POWERPOINT' },
-    pdf:   { bg:'linear-gradient(135deg,#d12b2b 0%,#7f1414 100%)', icon:'P', label:'PDF' }
+    word:  { bg:'linear-gradient(135deg,#3a6bb5 0%,#1e3d6b 100%)', icon:'W' },
+    excel: { bg:'linear-gradient(135deg,#1a9655 0%,#0a5a2f 100%)', icon:'X' },
+    ppt:   { bg:'linear-gradient(135deg,#d85530 0%,#8e2c14 100%)', icon:'P' },
+    pdf:   { bg:'linear-gradient(135deg,#d12b2b 0%,#7f1414 100%)', icon:'P' }
   };
   const c = config[ftype] || config.pdf;
   container.innerHTML = `
     <div style="width:100%;height:100%;background:${c.bg};border-radius:10px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">
       <div style="position:absolute;inset:0;background:radial-gradient(circle at 30% 20%, rgba(255,255,255,0.12), transparent 50%)"></div>
       <div style="font-size:96px;font-weight:900;color:rgba(255,255,255,0.95);font-family:-apple-system,BlinkMacSystemFont,sans-serif;letter-spacing:-3px;text-shadow:0 4px 24px rgba(0,0,0,0.2);position:relative">${c.icon}</div>
-      <div style="position:absolute;bottom:14px;left:16px;font-size:10px;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.55)">${c.label}</div>
     </div>
   `;
 }
