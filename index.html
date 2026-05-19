@@ -956,7 +956,9 @@ function initLazyPreviews() {
         const ftype = div.dataset.ftype;
         if(url && !div.dataset.loaded) {
           div.dataset.loaded = '1';
-          if(ftype === 'pdf') {
+          // PDF.js prova solo se il file è su Supabase Storage (no CORS) — altrimenti card stilizzata
+          const isSupabase = url.indexOf('supabase.co/storage') !== -1;
+          if(ftype === 'pdf' && isSupabase) {
             renderPdfThumbnail(div, url);
           } else {
             renderStyledCard(div, ftype);
