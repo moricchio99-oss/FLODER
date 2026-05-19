@@ -713,7 +713,7 @@ async function buildDocPage(id) {
   const tagsHtml = doc.tags?.length?doc.tags.map(t=>`<span style="background:var(--acb);color:var(--ac);font-size:11px;padding:3px 9px;border-radius:12px;font-weight:500">${t}</span>`).join(''):'';
 
   container.innerHTML = `
-  <div style="display:grid;grid-template-columns:2.4fr 1fr;min-height:calc(100vh - 54px)" id="DP_GRID">
+  <div style="display:grid;grid-template-columns:2.4fr 1fr" id="DP_GRID">
     
     <div style="background:#2a2a2a;padding:40px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 54px)">
       <div id="DP_VIEWER" style="background:#fff;${isHoriz?'width:min(960px,95%);aspect-ratio:16/9':'width:min(620px,90%);aspect-ratio:8.5/11'};box-shadow:0 8px 40px rgba(0,0,0,0.4);border-radius:4px;overflow:hidden;position:relative">
@@ -724,7 +724,7 @@ async function buildDocPage(id) {
       </div>
     </div>
     
-    <div style="padding:28px 26px;background:#fff;display:flex;flex-direction:column;gap:18px;max-height:calc(100vh - 54px);overflow-y:auto">
+    <div style="padding:28px 26px;background:#fff;display:flex;flex-direction:column;gap:18px">
       
       <div>
         <span style="background:${doc.file_type==='pdf'?'var(--db)':doc.file_type==='word'?'var(--wb)':doc.file_type==='excel'?'var(--eb)':'var(--pb)'};color:${doc.file_type==='pdf'?'var(--dc)':doc.file_type==='word'?'var(--wc)':doc.file_type==='excel'?'var(--ec)':'var(--pc)'};font-size:10px;font-weight:700;padding:4px 9px;border-radius:5px;letter-spacing:1.5px;text-transform:uppercase">${doc.file_type}</span>
