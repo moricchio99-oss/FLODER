@@ -675,14 +675,9 @@ async function openDoc(id) {
       </div>
       ${doc.description?`<p style="font-size:12.5px;color:var(--tx2);margin-bottom:9px;line-height:1.5">${doc.description}</p>`:''}
       ${doc.tags?.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:11px">${doc.tags.map(t=>`<span style="background:var(--acb);color:var(--ac);font-size:10px;font-weight:500;padding:2px 7px;border-radius:7px">${t}</span>`).join('')}</div>`:''}
-      <div class="pra" style="padding:0;overflow:hidden;height:380px;position:relative">
-        <iframe 
-          src="https://docs.google.com/viewer?url=${encodeURIComponent(doc.file_url)}&embedded=true"
-          style="width:100%;height:100%;border:none;border-radius:9px"
-          allowfullscreen
-          loading="lazy">
-        </iframe>
-        <div style="position:absolute;bottom:6px;right:8px;font-size:9.5px;color:var(--tx3);background:rgba(255,255,255,.8);padding:2px 6px;border-radius:4px">Preview via Google Docs</div>
+      <div class="pra" style="padding:0;overflow:hidden;height:380px;position:relative;background:#f5f4f1;border-radius:9px">
+        <div id="MOD_PREVIEW" style="width:100%;height:100%;position:relative;border-radius:9px;overflow:hidden"></div>
+        <a href="https://docs.google.com/viewer?url=${encodeURIComponent(doc.file_url)}" target="_blank" style="position:absolute;bottom:8px;right:8px;font-size:10px;color:#fff;background:rgba(0,0,0,.55);padding:4px 9px;border-radius:6px;text-decoration:none;backdrop-filter:blur(4px)">${ic('open',10)} Open in Google Docs</a>
       </div>
       <div class="ma2">
         <button class="ma${liked?' lk':''}" id="like_btn" onclick="doLike('${id}',${liked})">${ic('heart',12)} ${liked?'Liked':'Like'} · ${doc.likes?.length||0}</button>
@@ -695,6 +690,20 @@ async function openDoc(id) {
       ${inr}
     </div>
   </div></div>`);
+  // Render preview inside modal using the same logic as cards
+  const modPrev = document.getElementById('MOD_PREVIEW');
+  if(modPrev) {
+    if(doc.thumbnail_url) {
+      renderThumbnailImage(modPrev, doc.thumbnail_url, doc.file_type);
+    } else {
+      const isSupabase = doc.file_url && doc.file_url.indexOf('supabase.co/storage') !== -1;
+      if(doc.file_type === 'pdf' && isSupabase) {
+        renderPdfThumbnail(modPrev, doc.file_url);
+      } else {
+        renderStyledCard(modPrev, doc.file_type);
+      }
+    }
+  }
 }
 
 // ── ACTIONS ──
