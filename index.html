@@ -396,7 +396,7 @@ function card(doc, animated=false) {
   return `<div class="card${animated?' card-enter':''}" onclick="openDoc('${doc.id}')">
     <div class="cth cth-${doc.file_type}">
       <span class="cbdg bdg-${doc.file_type}">${bdgOf(doc.file_type)}</span>
-      <div class="lazy-preview" data-url="${doc.file_url}" data-ftype="${doc.file_type}" style="width:100%;height:100%;position:absolute;top:0;left:0;display:flex;align-items:center;justify-content:center">
+      <div class="lazy-preview" data-url="${doc.file_url}" data-ftype="${doc.file_type}" data-thumb="${doc.thumbnail_url || ''}" style="width:100%;height:100%;position:absolute;top:0;left:0;display:flex;align-items:center;justify-content:center">
         ${thumb(doc.file_type)}
       </div>
     </div>
@@ -954,14 +954,19 @@ function initLazyPreviews() {
         const div = el.target;
         const url = div.dataset.url;
         const ftype = div.dataset.ftype;
+        const thumb = div.dataset.thumb;
         if(url && !div.dataset.loaded) {
           div.dataset.loaded = '1';
-          // PDF.js prova solo se il file è su Supabase Storage (no CORS) — altrimenti card stilizzata
-          const isSupabase = url.indexOf('supabase.co/storage') !== -1;
-          if(ftype === 'pdf' && isSupabase) {
-            renderPdfThumbnail(div, url);
+          // Priority: 1) thumbnail image if available, 2) PDF.js for PDFs on Supabase, 3) styled card
+          if(thumb) {
+            renderThumbnailImage(div, thumb, ftype);
           } else {
-            renderStyledCard(div, ftype);
+            const isSupabase = url.indexOf('supabase.co/storage') !== -1;
+            if(ftype === 'pdf' && isSupabase) {
+              renderPdfThumbnail(div, url);
+            } else {
+              renderStyledCard(div, ftype);
+            }
           }
           observer.unobserve(div);
         }
@@ -970,6 +975,20 @@ function initLazyPreviews() {
   }, { rootMargin: '150px', threshold: 0.05 });
 
   document.querySelectorAll('.lazy-preview').forEach(el => observer.observe(el));
+}
+
+function renderThumbnailImage(container, thumbUrl, ftype) {
+  const img = new Image();
+  img.style.cssText = 'width:100%;height:100%;object-fit:cover;object-position:top;border-radius:10px;display:block';
+  img.onload = () => {
+    container.innerHTML = '';
+    container.appendChild(img);
+  };
+  img.onerror = () => {
+    // Fallback to styled card if thumbnail fails to load
+    renderStyledCard(container, ftype);
+  };
+  img.src = thumbUrl;
 }
 
 async function renderPdfThumbnail(container, url) {
