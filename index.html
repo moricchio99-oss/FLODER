@@ -294,13 +294,32 @@ const S = {
   vu: null,
   tags: [],
   uploadType: 'word',
+  docId: null,
 };
 const PG = {};
 const PAGE_SIZE = 18;
 let suid = 0;
 
+// ── URL ROUTING ──
+function parseUrl() {
+  const path = window.location.pathname;
+  const m = path.match(/^\/d\/([\w-]+)$/);
+  if(m) {
+    S.page = 'doc';
+    S.docId = m[1];
+  } else {
+    if(S.page === 'doc') { S.page = 'home'; S.docId = null; }
+  }
+}
+
+window.addEventListener('popstate', () => {
+  parseUrl();
+  render();
+});
+
 // ── INIT ──
 async function init() {
+  parseUrl();
   const { data: { session } } = await sb.auth.getSession();
   if (session) await loadProfile(session.user);
   sb.auth.onAuthStateChange(async (event, session) => {
@@ -531,6 +550,12 @@ async function render() {
 
 async function buildApp() {
   const app = document.getElementById('APP');
+  // Document page - full layout, no sidebar
+  if(S.page === 'doc' && S.docId) {
+    app.innerHTML = `<div id="DOC_PAGE" style="min-height:100vh"></div>`;
+    await buildDocPage(S.docId);
+    return;
+  }
   // tutti possono vedere il feed
   if(false) {
     app.innerHTML = landingHTML();
@@ -636,73 +661,162 @@ async function userHTML(uid) {
   ${docs.length?`<div class="sec"><div class="sch">By ${u.name} <small>${docs.length}</small></div>${paginatedGrid(docs,'user-'+uid)}</div>`:`<div class="emp"><p>No documents yet.</p></div>`}`;
 }
 
-// ── OPEN DOC MODAL ──
-async function openDoc(id) {
+// ── OPEN DOC — Navigate to /d/:id ──
+function openDoc(id) {
   closeM();
+  history.pushState({}, '', '/d/' + id);
+  S.page = 'doc';
+  S.docId = id;
+  window.scrollTo(0, 0);
+  render();
+}
+
+// ── BUILD DOCUMENT DETAIL PAGE ──
+async function buildDocPage(id) {
   await incViews(id);
   const { data: doc } = await sb.from('documents')
-    .select('*, profiles(id,name,avatar_url), likes(user_id), saves:document_saves(user_id), comments(id,content,created_at,profiles(id,name,avatar_url))')
+    .select('*, profiles(id,name,avatar_url,bio), likes(user_id), saves:document_saves(user_id), comments(id,content,created_at,profiles(id,name,avatar_url))')
     .eq('id', id).single();
-  if(!doc) return;
+  const container = document.getElementById('DOC_PAGE');
+  if(!container) return;
+  if(!doc) {
+    container.innerHTML = `<div style="max-width:600px;margin:80px auto;text-align:center;padding:40px">
+      <div style="font-size:24px;font-weight:700;color:var(--tx);margin-bottom:8px">Document not found</div>
+      <div style="color:var(--tx2);margin-bottom:24px">This document doesn't exist or has been removed.</div>
+      <button class="btn btna" onclick="goHome()">${ic('home',14)} Back to home</button>
+    </div>`;
+    return;
+  }
   const p = doc.profiles || {};
   const ini = (p.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   const liked = S.user && (doc.likes||[]).some(l=>l.user_id===S.user.id);
   const saved = S.user && (doc.saves||[]).some(s=>s.user_id===S.user.id);
+  const isHoriz = doc.file_type === 'ppt' || doc.file_type === 'excel';
   const cmts = (doc.comments||[]).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).map(c=>{
     const cp=c.profiles||{};
     const ci=(cp.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    return `<div class="cmt">
-      <div class="cav3" style="${cp.avatar_url?'background:transparent':'background:#0f7173'}">${cp.avatar_url?`<img src="${cp.avatar_url}">`:`${ci}`}</div>
-      <div class="cmb"><div class="cmh"><span class="cmn" onclick="closeM();goUser('${c.profiles?.id}')">${cp.name||'?'}</span><span class="cmt2">${timeAgo(c.created_at)}</span></div>
-      <p class="cmtx">${c.content}</p></div>
+    return `<div style="display:flex;gap:10px;margin-bottom:14px">
+      <div class="cav3" style="${cp.avatar_url?'background:transparent':'background:#0f7173'};flex-shrink:0">${cp.avatar_url?`<img src="${cp.avatar_url}">`:`${ci}`}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:2px">
+          <span style="font-size:12.5px;font-weight:600;color:var(--tx);cursor:pointer" onclick="goUser('${c.profiles?.id}')">${cp.name||'?'}</span>
+          <span style="font-size:10.5px;color:var(--tx3)">${timeAgo(c.created_at)}</span>
+        </div>
+        <p style="font-size:13px;color:var(--tx);margin:0;line-height:1.5">${c.content}</p>
+      </div>
     </div>`;
   }).join('');
   const inr = S.user
-    ? `<div class="cir">${avEl(S.profile,24)}<input id="CMT" placeholder="Add a comment…" onkeydown="if(event.key==='Enter')postCmt('${id}')"><button class="btn btna" onclick="postCmt('${id}')" style="flex-shrink:0;padding:5px 10px;font-size:11.5px">${ic('comment',11)} Post</button></div>`
-    : `<div style="margin-top:9px;padding:9px;background:var(--acb);border-radius:7px;font-size:11.5px;color:var(--ac);cursor:pointer" onclick="openAuth()">Sign in to comment →</div>`;
-  document.body.insertAdjacentHTML('beforeend', `<div class="ov" onclick="closeM()"><div class="mo" onclick="event.stopPropagation()">
-    <div class="moh">
-      <div class="moi mi${doc.file_type}">${thumb(doc.file_type)}</div>
-      <div style="flex:1;min-width:0"><div style="font-size:12.5px;font-weight:700;line-height:1.35;margin-bottom:3px">${doc.title}</div>
-      <div style="font-size:10.5px;color:var(--tx3)">${ftOf(doc.file_type)} · ${(doc.views||0).toLocaleString()} views</div></div>
-      <button class="mox" onclick="closeM()">${ic('close',14)}</button>
+    ? `<div style="display:flex;gap:8px;margin-top:14px;align-items:center">${avEl(S.profile,28)}<input id="CMT" placeholder="Add a comment…" style="flex:1;padding:8px 11px;border:1px solid var(--bor);border-radius:7px;font-size:12.5px" onkeydown="if(event.key==='Enter')postCmt('${id}')"><button class="btn btna" onclick="postCmt('${id}')" style="padding:7px 13px;font-size:12px">Post</button></div>`
+    : `<div style="margin-top:14px;padding:11px;background:var(--acb);border-radius:8px;font-size:12.5px;color:var(--ac);cursor:pointer;text-align:center" onclick="openAuth()">Sign in to comment →</div>`;
+  
+  const tagsHtml = doc.tags?.length?doc.tags.map(t=>`<span style="background:var(--acb);color:var(--ac);font-size:11px;padding:3px 9px;border-radius:12px;font-weight:500">${t}</span>`).join(''):'';
+
+  container.innerHTML = `
+  <div style="background:#fff;border-bottom:1px solid var(--bor);padding:14px 24px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10">
+    <button class="btn" onclick="goHome()" style="padding:7px 13px;font-size:12.5px;display:flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--bor)">${ic('home',13)} Back to home</button>
+    <div style="flex:1;min-width:0;font-size:13px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${doc.title}</div>
+    <button class="btn" onclick="shareDoc()" style="padding:7px 12px;font-size:12px;background:transparent;border:1px solid var(--bor);display:flex;align-items:center;gap:5px">${ic('open',12)} Share</button>
+  </div>
+  
+  <div style="display:grid;grid-template-columns:2fr 1fr;min-height:calc(100vh - 60px)" id="DP_GRID">
+    
+    <div style="background:#2a2a2a;padding:40px 32px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:calc(100vh - 60px)">
+      <div id="DP_VIEWER" style="background:#fff;${isHoriz?'width:min(720px,90%);aspect-ratio:16/9':'width:min(440px,80%);aspect-ratio:8.5/11'};box-shadow:0 8px 40px rgba(0,0,0,0.4);border-radius:4px;overflow:hidden;position:relative">
+      </div>
+      <div style="margin-top:18px;font-size:11.5px;color:rgba(255,255,255,0.5);text-align:center">
+        ${doc.file_type==='pdf'?'PDF document':doc.file_type==='ppt'?'Presentation':doc.file_type==='excel'?'Spreadsheet':'Word document'} · 
+        <a href="${doc.file_url}" target="_blank" onclick="incViews('${id}')" style="color:rgba(255,255,255,0.7);text-decoration:underline">Open original</a>
+      </div>
     </div>
-    <div class="mob">
-      <div class="ubdg" onclick="closeM();goUser('${doc.user_id}')">
-        <div class="cav3" style="${p.avatar_url?'background:transparent':'background:#0f7173'}">${p.avatar_url?`<img src="${p.avatar_url}">`:`${ini}`}</div>
-        <div><div style="font-size:12.5px;font-weight:600">${p.name||'Unknown'}</div><div style="font-size:10.5px;color:var(--tx3)">${timeAgo(doc.created_at)}</div></div>
-        <span style="margin-left:auto;font-size:11px;color:var(--ac);font-weight:500">View profile →</span>
+    
+    <div style="padding:28px 26px;background:#fff;display:flex;flex-direction:column;gap:18px;max-height:calc(100vh - 60px);overflow-y:auto">
+      
+      <div>
+        <span style="background:${doc.file_type==='pdf'?'var(--db)':doc.file_type==='word'?'var(--wb)':doc.file_type==='excel'?'var(--eb)':'var(--pb)'};color:${doc.file_type==='pdf'?'var(--dc)':doc.file_type==='word'?'var(--wc)':doc.file_type==='excel'?'var(--ec)':'var(--pc)'};font-size:10px;font-weight:700;padding:4px 9px;border-radius:5px;letter-spacing:1.5px;text-transform:uppercase">${doc.file_type}</span>
+        <h1 style="font-size:21px;font-weight:700;color:var(--tx);margin:10px 0 7px;line-height:1.25">${doc.title}</h1>
+        ${doc.description?`<p style="font-size:13.5px;color:var(--tx2);margin:0;line-height:1.55">${doc.description}</p>`:''}
       </div>
-      ${doc.description?`<p style="font-size:12.5px;color:var(--tx2);margin-bottom:9px;line-height:1.5">${doc.description}</p>`:''}
-      ${doc.tags?.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:11px">${doc.tags.map(t=>`<span style="background:var(--acb);color:var(--ac);font-size:10px;font-weight:500;padding:2px 7px;border-radius:7px">${t}</span>`).join('')}</div>`:''}
-      <div class="pra" style="padding:0;overflow:hidden;height:380px;position:relative;background:#f5f4f1;border-radius:9px">
-        <div id="MOD_PREVIEW" style="width:100%;height:100%;position:relative;border-radius:9px;overflow:hidden"></div>
-        <a href="https://docs.google.com/viewer?url=${encodeURIComponent(doc.file_url)}" target="_blank" style="position:absolute;bottom:8px;right:8px;font-size:10px;color:#fff;background:rgba(0,0,0,.55);padding:4px 9px;border-radius:6px;text-decoration:none;backdrop-filter:blur(4px)">${ic('open',10)} Open in Google Docs</a>
+      
+      <div style="display:flex;gap:8px">
+        <a href="${doc.file_url}" target="_blank" onclick="incViews('${id}')" style="flex:1;background:var(--ac);color:white;border:none;padding:11px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;text-decoration:none">${ic('download',14)} Download .${extOf(doc.file_type)}</a>
+        <button onclick="doSaveDoc('${id}',${saved})" id="dp_save_btn" style="background:#fff;color:var(--tx);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer;${saved?'background:var(--acb);color:var(--ac);border-color:var(--ac)':''}" aria-label="save">${ic(saved?'bookmark':'savi',14)}</button>
+        <button onclick="doLike('${id}',${liked})" id="dp_like_btn" style="background:#fff;color:var(--tx);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer;${liked?'background:#fff0f0;color:#d12b2b;border-color:#d12b2b':''}" aria-label="like">${ic('heart',14)}</button>
       </div>
-      <div class="ma2">
-        <button class="ma${liked?' lk':''}" id="like_btn" onclick="doLike('${id}',${liked})">${ic('heart',12)} ${liked?'Liked':'Like'} · ${doc.likes?.length||0}</button>
-        <button class="ma${saved?' sv2':''}" id="save_btn" onclick="doSaveDoc('${id}',${saved})">${ic('savi',12)} ${saved?'Saved':'Save'}</button>
-        <a class="ma madl" href="${doc.file_url}" target="_blank" onclick="incViews('${id}')" style="text-decoration:none">${ic('download',12)} Download .${extOf(doc.file_type)}</a>
+      
+      <div onclick="goUser('${doc.user_id}')" style="display:flex;align-items:center;gap:11px;padding:11px;background:var(--sur2);border-radius:9px;cursor:pointer">
+        <div class="cav3" style="${p.avatar_url?'background:transparent':'background:#0f7173'};width:36px;height:36px;font-size:13px">${p.avatar_url?`<img src="${p.avatar_url}">`:`${ini}`}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--tx)">${p.name||'Unknown'}</div>
+          <div style="font-size:11.5px;color:var(--tx2)">${timeAgo(doc.created_at)}</div>
+        </div>
+        <span style="color:var(--ac);font-size:11.5px;font-weight:500">View profile →</span>
       </div>
-      <div class="dvd"></div>
-      <div style="font-size:11.5px;font-weight:600;margin-bottom:9px">${ic('comment',12)} Comments (${doc.comments?.length||0})</div>
-      ${cmts||`<div class="emp" style="padding:12px 0">${ic('comment',24)}<p>No comments yet.</p></div>`}
-      ${inr}
+      
+      <div style="display:flex;gap:18px;padding:13px 0;border-top:1px solid var(--bor);border-bottom:1px solid var(--bor)">
+        <div>
+          <div style="font-size:10.5px;color:var(--tx3);font-weight:600;letter-spacing:1px">VIEWS</div>
+          <div style="font-size:17px;font-weight:700;color:var(--tx);margin-top:2px">${(doc.views||0).toLocaleString()}</div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;color:var(--tx3);font-weight:600;letter-spacing:1px">LIKES</div>
+          <div style="font-size:17px;font-weight:700;color:var(--tx);margin-top:2px">${doc.likes?.length||0}</div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;color:var(--tx3);font-weight:600;letter-spacing:1px">COMMENTS</div>
+          <div style="font-size:17px;font-weight:700;color:var(--tx);margin-top:2px">${doc.comments?.length||0}</div>
+        </div>
+      </div>
+      
+      ${tagsHtml?`<div>
+        <div style="font-size:10.5px;color:var(--tx3);font-weight:600;letter-spacing:1px;margin-bottom:8px">TAGS</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${tagsHtml}</div>
+      </div>`:''}
+      
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:6px">
+          ${ic('comment',14)} Comments (${doc.comments?.length||0})
+        </div>
+        ${cmts||`<div style="padding:14px;text-align:center;color:var(--tx3);font-size:12px">No comments yet.</div>`}
+        ${inr}
+      </div>
     </div>
-  </div></div>`);
-  // Render preview inside modal using the same logic as cards
-  const modPrev = document.getElementById('MOD_PREVIEW');
-  if(modPrev) {
+  </div>
+  
+  <style>
+    @media (max-width:900px) {
+      #DP_GRID { grid-template-columns: 1fr !important; }
+    }
+  </style>`;
+  
+  const viewer = document.getElementById('DP_VIEWER');
+  if(viewer) {
     if(doc.thumbnail_url) {
-      renderThumbnailImage(modPrev, doc.thumbnail_url, doc.file_type);
+      renderThumbnailImage(viewer, doc.thumbnail_url, doc.file_type);
     } else {
       const isSupabase = doc.file_url && doc.file_url.indexOf('supabase.co/storage') !== -1;
       if(doc.file_type === 'pdf' && isSupabase) {
-        renderPdfThumbnail(modPrev, doc.file_url);
+        renderPdfThumbnail(viewer, doc.file_url);
       } else {
-        renderStyledCard(modPrev, doc.file_type);
+        renderStyledCard(viewer, doc.file_type);
       }
     }
+  }
+}
+
+function goHome() {
+  history.pushState({}, '', '/');
+  S.page = 'home';
+  S.docId = null;
+  render();
+}
+
+function shareDoc() {
+  const url = window.location.href;
+  if(navigator.share) {
+    navigator.share({ url: url, title: document.title }).catch(()=>{});
+  } else {
+    navigator.clipboard.writeText(url).then(()=>toast('Link copied!', true));
   }
 }
 
@@ -714,7 +828,7 @@ async function doLike(docId, isLiked) {
   } else {
     await sb.from('likes').insert({user_id:S.user.id,document_id:docId});
   }
-  closeM(); openDoc(docId); buildCN_soft();
+  if(S.page === 'doc') { await buildDocPage(docId); } else { closeM(); buildCN_soft(); }
 }
 
 async function doSaveDoc(docId, isSaved) {
@@ -726,7 +840,7 @@ async function doSaveDoc(docId, isSaved) {
     await sb.from('document_saves').insert({user_id:S.user.id,document_id:docId});
     toast('Saved!',true);
   }
-  closeM(); openDoc(docId); buildCN_soft();
+  if(S.page === 'doc') { await buildDocPage(docId); } else { closeM(); buildCN_soft(); }
 }
 
 async function doSave(e, docId) {
@@ -748,7 +862,7 @@ async function postCmt(docId) {
   if(!inp||!inp.value.trim()) return;
   await sb.from('comments').insert({user_id:S.user.id,document_id:docId,content:inp.value.trim()});
   toast('Comment posted!',true);
-  closeM(); openDoc(docId);
+  if(S.page === 'doc') { await buildDocPage(docId); } else { closeM(); }
 }
 
 async function deleteDoc(e, docId) {
@@ -944,13 +1058,23 @@ async function saveProfile() {
 }
 
 // ── NAVIGATION ──
-function goto(p){S.page=p;S.vu=null;S.search='';render();}
+function goto(p){
+  S.page=p;S.vu=null;S.search='';S.docId=null;
+  if(window.location.pathname !== '/') history.pushState({}, '', '/');
+  render();
+}
 function setTF(f){S.tf=f;if(!['home','trending','explore'].includes(S.page))S.page='home';render();}
 function setSort(v){S.sort=v;render();}
-function doSearch(v){S.search=v;S.page='home';render();}
+function doSearch(v){
+  S.search=v;S.page='home';S.docId=null;
+  if(window.location.pathname !== '/') history.pushState({}, '', '/');
+  render();
+}
 function goUser(uid){
   if(S.user&&uid===S.user.id){goto('profile');return;}
-  S.page='user';S.vu=uid;render();
+  S.page='user';S.vu=uid;S.docId=null;
+  if(window.location.pathname !== '/') history.pushState({}, '', '/');
+  render();
 }
 
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM();});
