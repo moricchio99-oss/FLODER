@@ -713,16 +713,10 @@ async function buildDocPage(id) {
   const tagsHtml = doc.tags?.length?doc.tags.map(t=>`<span style="background:var(--acb);color:var(--ac);font-size:11px;padding:3px 9px;border-radius:12px;font-weight:500">${t}</span>`).join(''):'';
 
   container.innerHTML = `
-  <div style="background:#fff;border-bottom:1px solid var(--bor);padding:14px 24px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:10">
-    <button class="btn" onclick="goHome()" style="padding:7px 13px;font-size:12.5px;display:flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--bor)">${ic('home',13)} Back to home</button>
-    <div style="flex:1;min-width:0;font-size:13px;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${doc.title}</div>
-    <button class="btn" onclick="shareDoc()" style="padding:7px 12px;font-size:12px;background:transparent;border:1px solid var(--bor);display:flex;align-items:center;gap:5px">${ic('open',12)} Share</button>
-  </div>
-  
-  <div style="display:grid;grid-template-columns:2fr 1fr;min-height:calc(100vh - 60px)" id="DP_GRID">
+  <div style="display:grid;grid-template-columns:2.4fr 1fr;min-height:calc(100vh - 54px)" id="DP_GRID">
     
-    <div style="background:#2a2a2a;padding:40px 32px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:calc(100vh - 60px)">
-      <div id="DP_VIEWER" style="background:#fff;${isHoriz?'width:min(720px,90%);aspect-ratio:16/9':'width:min(440px,80%);aspect-ratio:8.5/11'};box-shadow:0 8px 40px rgba(0,0,0,0.4);border-radius:4px;overflow:hidden;position:relative">
+    <div style="background:#2a2a2a;padding:32px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 54px)">
+      <div id="DP_VIEWER" style="background:#fff;${isHoriz?'width:min(960px,95%);aspect-ratio:16/9':'width:min(620px,90%);aspect-ratio:8.5/11'};box-shadow:0 8px 40px rgba(0,0,0,0.4);border-radius:4px;overflow:hidden;position:relative">
       </div>
       <div style="margin-top:18px;font-size:11.5px;color:rgba(255,255,255,0.5);text-align:center">
         ${doc.file_type==='pdf'?'PDF document':doc.file_type==='ppt'?'Presentation':doc.file_type==='excel'?'Spreadsheet':'Word document'} · 
@@ -730,7 +724,7 @@ async function buildDocPage(id) {
       </div>
     </div>
     
-    <div style="padding:28px 26px;background:#fff;display:flex;flex-direction:column;gap:18px;max-height:calc(100vh - 60px);overflow-y:auto">
+    <div style="padding:28px 26px;background:#fff;display:flex;flex-direction:column;gap:18px;max-height:calc(100vh - 54px);overflow-y:auto">
       
       <div>
         <span style="background:${doc.file_type==='pdf'?'var(--db)':doc.file_type==='word'?'var(--wb)':doc.file_type==='excel'?'var(--eb)':'var(--pb)'};color:${doc.file_type==='pdf'?'var(--dc)':doc.file_type==='word'?'var(--wc)':doc.file_type==='excel'?'var(--ec)':'var(--pc)'};font-size:10px;font-weight:700;padding:4px 9px;border-radius:5px;letter-spacing:1.5px;text-transform:uppercase">${doc.file_type}</span>
@@ -742,6 +736,7 @@ async function buildDocPage(id) {
         <a href="${doc.file_url}" target="_blank" onclick="incViews('${id}')" style="flex:1;background:var(--ac);color:white;border:none;padding:11px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;text-decoration:none">${ic('download',14)} Download .${extOf(doc.file_type)}</a>
         <button onclick="doSaveDoc('${id}',${saved})" id="dp_save_btn" style="background:#fff;color:var(--tx);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer;${saved?'background:var(--acb);color:var(--ac);border-color:var(--ac)':''}" aria-label="save">${ic(saved?'bookmark':'savi',14)}</button>
         <button onclick="doLike('${id}',${liked})" id="dp_like_btn" style="background:#fff;color:var(--tx);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer;${liked?'background:#fff0f0;color:#d12b2b;border-color:#d12b2b':''}" aria-label="like">${ic('heart',14)}</button>
+        <button onclick="shareDoc()" style="background:#fff;color:var(--tx);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer" aria-label="share">${ic('open',14)}</button>
       </div>
       
       <div onclick="goUser('${doc.user_id}')" style="display:flex;align-items:center;gap:11px;padding:11px;background:var(--sur2);border-radius:9px;cursor:pointer">
