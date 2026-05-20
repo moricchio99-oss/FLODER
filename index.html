@@ -367,6 +367,8 @@ const I = {
   plus: `<line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/>`,
   refresh: `<path d="M2 8a6 6 0 1010.7-3.7M14 2v4h-4"/>`,
   share: `<circle cx="14" cy="3" r="1.5"/><circle cx="14" cy="13" r="1.5"/><circle cx="2" cy="8" r="1.5"/><line x1="3.5" y1="8.9" x2="12.5" y2="12.1"/><line x1="12.5" y1="3.9" x2="3.5" y2="7.1"/>`,
+  back: `<path d="M10 13L5 8l5-5"/>`,
+  open: `<path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1v-3M9 2h5v5M14 2L7 9"/>`,
 };
 function ic(n, w=14, x='') {
   return `<svg viewBox="0 0 16 16" style="width:${w}px;height:${w}px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;${x}">${I[n]}</svg>`;
@@ -491,6 +493,7 @@ function buildNav() {
        <button class="btn btna" onclick="openAuth()">Get started</button>`;
   document.getElementById('NV').innerHTML = `<nav class="nav">
     <div class="logo" onclick="goto('home')">${LOGO_MARK}<span class="logo-word"><span style="color:#b0b8cc">File</span><span style="color:#0f7173">Silver</span></span></div>
+    ${S.page === 'doc' ? `<button class="btn" onclick="goBack()" style="display:flex;align-items:center;gap:5px;padding:7px 13px;font-size:12.5px;flex-shrink:0">${ic('back',13)} Back</button>` : ''}
     <div class="sw"><input class="sinp" placeholder="Search documents, authors, tags…" value="${S.search}" oninput="doSearch(this.value)" autocomplete="off"></div>
     <div class="nr">${right}</div>
   </nav>`;
@@ -1040,6 +1043,10 @@ function goHome() {
   S.page = 'home';
   S.docId = null;
   render();
+}
+
+function goBack() {
+  goHome();
 }
 
 function shareDoc() {
