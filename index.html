@@ -694,7 +694,6 @@ async function buildDocPage(id) {
   const ini = (p.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   const liked = S.user && (doc.likes||[]).some(l=>l.user_id===S.user.id);
   const saved = S.user && (doc.saves||[]).some(s=>s.user_id===S.user.id);
-  const isHoriz = doc.file_type === 'ppt' || doc.file_type === 'excel';
   const cmts = (doc.comments||[]).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).map(c=>{
     const cp=c.profiles||{};
     const ci=(cp.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
@@ -718,12 +717,8 @@ async function buildDocPage(id) {
   container.innerHTML = `
   <div style="display:grid;grid-template-columns:2.4fr 1fr" id="DP_GRID">
     
-    <div style="background:#2a2a2a;padding:40px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 54px)">
-      <div id="DP_VIEWER" style="background:#fff;${isHoriz?'width:min(960px,95%);aspect-ratio:16/9':'width:min(620px,90%);aspect-ratio:8.5/11'};box-shadow:0 8px 40px rgba(0,0,0,0.4);border-radius:4px;overflow:hidden;position:relative">
-      </div>
-      <div style="margin-top:18px;font-size:11.5px;color:rgba(255,255,255,0.5);text-align:center">
-        ${doc.file_type==='pdf'?'PDF document':doc.file_type==='ppt'?'Presentation':doc.file_type==='excel'?'Spreadsheet':'Word document'} · 
-        <a href="${doc.file_url}" target="_blank" onclick="incViews('${id}')" style="color:rgba(255,255,255,0.7);text-decoration:underline">Open original</a>
+    <div style="background:#2a2a2a;padding:0;display:flex;flex-direction:column;min-height:calc(100vh - 54px)">
+      <div id="DP_VIEWER" style="flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:calc(100vh - 54px)">
       </div>
     </div>
     
@@ -789,17 +784,101 @@ async function buildDocPage(id) {
   
   const viewer = document.getElementById('DP_VIEWER');
   if(viewer) {
-    if(doc.thumbnail_url) {
+    const isSupabase = doc.file_url && doc.file_url.indexOf('supabase.co/storage') !== -1;
+    if(doc.file_type === 'pdf' && isSupabase) {
+      renderPdfFull(viewer, doc.file_url);
+    } else if(['word','excel','ppt'].includes(doc.file_type) && isSupabase) {
+      renderOfficeViewer(viewer, doc.file_url, doc.file_type, doc.thumbnail_url);
+    } else if(doc.thumbnail_url) {
       renderThumbnailImage(viewer, doc.thumbnail_url, doc.file_type);
     } else {
-      const isSupabase = doc.file_url && doc.file_url.indexOf('supabase.co/storage') !== -1;
-      if(doc.file_type === 'pdf' && isSupabase) {
-        renderPdfThumbnail(viewer, doc.file_url);
-      } else {
-        renderStyledCard(viewer, doc.file_type);
-      }
+      renderStyledCard(viewer, doc.file_type);
     }
   }
+}
+
+// ── FULL PDF VIEWER (multipage, PDF.js) ──
+async function renderPdfFull(container, url) {
+  container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.5);font-size:13px">Loading document…</div>`;
+  if(typeof pdfjsLib === 'undefined') {
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.5);font-size:13px">Preview unavailable</div>`;
+    return;
+  }
+  try {
+    const pdf = await pdfjsLib.getDocument(url).promise;
+    const total = pdf.numPages;
+    let current = 1;
+    container.innerHTML = `
+      <div style="position:sticky;top:0;z-index:5;background:rgba(0,0,0,0.55);backdrop-filter:blur(8px);width:100%;display:flex;align-items:center;justify-content:center;gap:14px;padding:10px;color:#fff;font-size:12.5px">
+        <button id="pdf_prev" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">‹</button>
+        <span id="pdf_counter" style="min-width:90px;text-align:center">Page ${current} of ${total}</span>
+        <button id="pdf_next" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">›</button>
+      </div>
+      <div id="pdf_pages" style="width:100%;flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;align-items:center;gap:20px"></div>
+    `;
+    const pagesBox = container.querySelector('#pdf_pages');
+    const counter = container.querySelector('#pdf_counter');
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    // Render ALL pages stacked vertically (natural scroll)
+    for(let n = 1; n <= total; n++) {
+      const page = await pdf.getPage(n);
+      const baseViewport = page.getViewport({ scale: 1 });
+      const targetWidth = 780;
+      const scale = (targetWidth / baseViewport.width) * dpr;
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      canvas.style.width = (viewport.width / dpr) + 'px';
+      canvas.style.height = (viewport.height / dpr) + 'px';
+      canvas.style.boxShadow = '0 8px 40px rgba(0,0,0,0.4)';
+      canvas.style.borderRadius = '3px';
+      canvas.style.background = '#fff';
+      canvas.dataset.page = n;
+      pagesBox.appendChild(canvas);
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    }
+
+    // Track current page on scroll
+    pagesBox.addEventListener('scroll', () => {
+      const canvases = pagesBox.querySelectorAll('canvas');
+      const boxTop = pagesBox.scrollTop;
+      let visiblePage = 1;
+      canvases.forEach(c => {
+        if(c.offsetTop - pagesBox.offsetTop <= boxTop + 120) visiblePage = parseInt(c.dataset.page);
+      });
+      current = visiblePage;
+      counter.textContent = `Page ${current} of ${total}`;
+    });
+
+    const goToPage = (n) => {
+      n = Math.max(1, Math.min(total, n));
+      current = n;
+      const target = pagesBox.querySelector(`canvas[data-page="${n}"]`);
+      if(target) pagesBox.scrollTo({ top: target.offsetTop - pagesBox.offsetTop - 20, behavior: 'smooth' });
+      counter.textContent = `Page ${current} of ${total}`;
+    };
+    container.querySelector('#pdf_prev').onclick = () => goToPage(current - 1);
+    container.querySelector('#pdf_next').onclick = () => goToPage(current + 1);
+  } catch(err) {
+    console.warn('[FileSilver] PDF full render failed:', err.message || err);
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.5);font-size:13px;text-align:center;padding:40px">Could not load preview.<br>Try downloading the file instead.</div>`;
+  }
+}
+
+// ── OFFICE VIEWER (Microsoft Office Online) ──
+function renderOfficeViewer(container, url, ftype, thumbUrl) {
+  const officeUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(url);
+  container.innerHTML = `
+    <div style="width:100%;flex:1;position:relative;min-height:calc(100vh - 54px);background:#2a2a2a">
+      <div id="office_loading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.6);font-size:13px;gap:10px;z-index:1">
+        <div style="width:28px;height:28px;border:3px solid rgba(255,255,255,0.2);border-top-color:rgba(255,255,255,0.7);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+        Loading document…
+      </div>
+      <iframe src="${officeUrl}" style="width:100%;height:100%;border:none;position:relative;z-index:2" onload="var l=document.getElementById('office_loading');if(l)l.style.display='none'" allowfullscreen></iframe>
+    </div>
+  `;
 }
 
 function goHome() {
