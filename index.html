@@ -809,12 +809,12 @@ async function renderPdfFull(container, url) {
     const total = pdf.numPages;
     let current = 1;
     container.innerHTML = `
-      <div style="position:sticky;top:54px;z-index:5;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);width:100%;display:flex;align-items:center;justify-content:center;gap:14px;padding:10px;color:#fff;font-size:12.5px">
-        <button id="pdf_prev" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">‹</button>
-        <span id="pdf_counter" style="min-width:90px;text-align:center">Page ${current} of ${total}</span>
-        <button id="pdf_next" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:30px;height:30px;border-radius:7px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">›</button>
-      </div>
       <div id="pdf_pages" style="width:100%;padding:24px;display:flex;flex-direction:column;align-items:center;gap:20px"></div>
+      <div style="position:fixed;bottom:24px;left:35%;transform:translateX(-50%);z-index:50;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);display:flex;align-items:center;gap:14px;padding:9px 14px;border-radius:30px;color:#fff;font-size:12.5px;box-shadow:0 4px 20px rgba(0,0,0,0.35)" id="pdf_navbar">
+        <button id="pdf_prev" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">‹</button>
+        <span id="pdf_counter" style="min-width:84px;text-align:center;font-weight:500">Page ${current} of ${total}</span>
+        <button id="pdf_next" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">›</button>
+      </div>
     `;
     const pagesBox = container.querySelector('#pdf_pages');
     const counter = container.querySelector('#pdf_counter');
