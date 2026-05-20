@@ -53,6 +53,7 @@
 <link rel="apple-touch-icon" href="/favicon.png">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
   if (window.pdfjsLib) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -787,7 +788,9 @@ async function buildDocPage(id) {
     const isSupabase = doc.file_url && doc.file_url.indexOf('supabase.co/storage') !== -1;
     if(doc.file_type === 'pdf' && isSupabase) {
       renderPdfFull(viewer, doc.file_url);
-    } else if(['word','excel','ppt'].includes(doc.file_type) && isSupabase) {
+    } else if(doc.file_type === 'excel' && isSupabase) {
+      renderExcelViewer(viewer, doc.file_url);
+    } else if(['word','ppt'].includes(doc.file_type) && isSupabase) {
       renderOfficeViewer(viewer, doc.file_url, doc.file_type, doc.thumbnail_url);
     } else if(doc.thumbnail_url) {
       renderThumbnailImage(viewer, doc.thumbnail_url, doc.file_type);
@@ -886,6 +889,108 @@ function renderOfficeViewer(container, url, ftype, thumbUrl) {
       <div style="position:absolute;bottom:0;left:0;right:0;height:34px;background:#2a2a2a;z-index:3;pointer-events:none"></div>
     </div>
   `;
+}
+
+// ── EXCEL VIEWER (SheetJS — native rendering in browser) ──
+async function renderExcelViewer(container, url) {
+  container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:calc(100vh - 54px);color:rgba(255,255,255,0.5);font-size:13px;gap:10px;flex-direction:column">
+    <div style="width:28px;height:28px;border:3px solid rgba(255,255,255,0.2);border-top-color:rgba(255,255,255,0.7);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+    Loading spreadsheet…
+  </div>`;
+  if(typeof XLSX === 'undefined') {
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:calc(100vh - 54px);color:rgba(255,255,255,0.5);font-size:13px">Preview unavailable</div>`;
+    return;
+  }
+  try {
+    const resp = await fetch(url);
+    const buf = await resp.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const sheetNames = wb.SheetNames;
+    let activeSheet = 0;
+
+    const colLabel = (n) => {
+      let s = '';
+      n = n + 1;
+      while(n > 0) { let m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+      return s;
+    };
+
+    const buildSheetTable = (idx) => {
+      const ws = wb.Sheets[sheetNames[idx]];
+      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
+      const maxCol = range.e.c;
+      const maxRow = range.e.r;
+      const colWidths = (ws['!cols'] || []).map(c => c && c.wch ? c.wch : null);
+      const merges = ws['!merges'] || [];
+      const isMerged = (r, c) => merges.find(m => r>=m.s.r && r<=m.e.r && c>=m.s.c && c<=m.e.c);
+      const isMergeHead = (r, c) => merges.find(m => r===m.s.r && c===m.s.c);
+
+      let html = '<table style="border-collapse:collapse;font-size:12.5px;font-family:-apple-system,sans-serif;background:#fff">';
+      // Header row with column letters
+      html += '<thead><tr><th style="background:#f1f0ec;border:1px solid #d8d5cd;min-width:38px;height:22px;position:sticky;top:0;left:0;z-index:3"></th>';
+      for(let c = 0; c <= maxCol; c++) {
+        const w = colWidths[c] ? Math.max(48, colWidths[c]*7) : 90;
+        html += `<th style="background:#f1f0ec;border:1px solid #d8d5cd;font-weight:600;color:#6b6758;font-size:11px;height:22px;min-width:${w}px;max-width:${w}px;position:sticky;top:0;z-index:2">${colLabel(c)}</th>`;
+      }
+      html += '</tr></thead><tbody>';
+      for(let r = 0; r <= maxRow; r++) {
+        html += `<tr><td style="background:#f1f0ec;border:1px solid #d8d5cd;font-weight:600;color:#6b6758;font-size:11px;text-align:center;min-width:38px;position:sticky;left:0;z-index:1">${r+1}</td>`;
+        for(let c = 0; c <= maxCol; c++) {
+          const merged = isMerged(r, c);
+          if(merged && !isMergeHead(r, c)) continue; // skip cells covered by a merge
+          const addr = XLSX.utils.encode_cell({ r, c });
+          const cell = ws[addr];
+          let val = cell ? (cell.w !== undefined ? cell.w : cell.v) : '';
+          if(val === undefined || val === null) val = '';
+          let span = '';
+          if(merged && isMergeHead(r, c)) {
+            const cs = merged.e.c - merged.s.c + 1;
+            const rs = merged.e.r - merged.s.r + 1;
+            if(cs > 1) span += ` colspan="${cs}"`;
+            if(rs > 1) span += ` rowspan="${rs}"`;
+          }
+          // Detect numeric for right-alignment
+          const isNum = cell && cell.t === 'n';
+          const bold = cell && cell.s && cell.s.font && cell.s.font.bold;
+          const w = colWidths[c] ? Math.max(48, colWidths[c]*7) : 90;
+          html += `<td${span} style="border:1px solid #e2e0d8;padding:3px 8px;height:22px;color:#18170f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${w*2}px;text-align:${isNum?'right':'left'};${bold?'font-weight:700;':''}">${String(val)}</td>`;
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      return html;
+    };
+
+    const tabsHtml = sheetNames.map((name, i) =>
+      `<button class="xls-tab" data-sheet="${i}" style="background:${i===activeSheet?'#fff':'rgba(255,255,255,0.08)'};color:${i===activeSheet?'#107c41':'rgba(255,255,255,0.7)'};border:none;padding:7px 16px;font-size:12px;font-weight:${i===activeSheet?'600':'500'};cursor:pointer;border-radius:7px 7px 0 0;white-space:nowrap">${name}</button>`
+    ).join('');
+
+    container.innerHTML = `
+      <div style="width:100%;flex:1;display:flex;flex-direction:column;min-height:calc(100vh - 54px)">
+        <div style="background:#fff;flex:1;margin:20px;border-radius:8px;overflow:auto;box-shadow:0 8px 40px rgba(0,0,0,0.4);max-height:calc(100vh - 140px)">
+          <div id="xls_table" style="overflow:auto;width:100%;height:100%">${buildSheetTable(activeSheet)}</div>
+        </div>
+        ${sheetNames.length > 1 ? `<div style="display:flex;gap:4px;padding:0 20px 16px;flex-wrap:wrap" id="xls_tabs">${tabsHtml}</div>` : ''}
+      </div>
+    `;
+
+    if(sheetNames.length > 1) {
+      container.querySelectorAll('.xls-tab').forEach(btn => {
+        btn.onclick = () => {
+          activeSheet = parseInt(btn.dataset.sheet);
+          container.querySelector('#xls_table').innerHTML = buildSheetTable(activeSheet);
+          container.querySelectorAll('.xls-tab').forEach((b, i) => {
+            b.style.background = i===activeSheet ? '#fff' : 'rgba(255,255,255,0.08)';
+            b.style.color = i===activeSheet ? '#107c41' : 'rgba(255,255,255,0.7)';
+            b.style.fontWeight = i===activeSheet ? '600' : '500';
+          });
+        };
+      });
+    }
+  } catch(err) {
+    console.warn('[FileSilver] Excel render failed:', err.message || err);
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:calc(100vh - 54px);color:rgba(255,255,255,0.5);font-size:13px;text-align:center;padding:40px">Could not load preview.<br>Try downloading the file instead.</div>`;
+  }
 }
 
 function goHome() {
