@@ -48,10 +48,10 @@
 </script>
 
 <!-- Favicon -->
-<link rel="icon" href="/favicon.ico?v=2" sizes="any">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2">
-<link rel="apple-touch-icon" href="/favicon-180.png?v=2">
+<link rel="icon" href="/favicon-2.ico?v=3" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=3">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=3">
+<link rel="apple-touch-icon" href="/favicon-180.png?v=3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -597,17 +597,14 @@ async function buildApp() {
     cn.innerHTML = `<div class="sec"><div class="sch">Saved <small>${saved.length}</small></div>${saved.length?paginatedGrid(saved,'saved'): `<div class="emp">${ic('bookmark',28)}<p>Nothing saved yet.</p></div>`}</div>`;
     return;
   }
-  // Home
-  const trend = [...docs].sort((a,b)=>(b.views||0)-(a.views||0));
+  // Home — single unified feed, respects the sort toggle (Recent / Most viewed / Most liked)
   let html = toolbar();
-  if(S.tf==='all' && !S.search) {
-    const sheets = docs.filter(d=>d.file_type==='excel').sort((a,b)=>(b.views||0)-(a.views||0));
-    if(sheets.length) {
-      html += `<div class="sec"><div class="sch">${ic('excel',15)} Popular spreadsheets</div>${paginatedGrid(sheets,'sheets-home')}</div>`;
-    }
-    html += `<div class="sec"><div class="sch">Trending this week</div>${paginatedGrid(trend,'trend-home')}</div>`;
-  }
-  html += `<div class="sec"><div class="sch">${S.search?'Search results':S.tf==='all'?'Recent uploads':'Filtered results'}</div>${docs.length?paginatedGrid(docs,'rec'):`<div class="emp">${ic('file',28)}<p>No documents yet. Be the first to upload!</p></div>`}</div>`;
+  const heading = S.search ? 'Search results'
+    : S.tf !== 'all' ? 'Filtered results'
+    : S.sort === 'views' ? 'Most viewed'
+    : S.sort === 'likes' ? 'Most liked'
+    : 'Latest documents';
+  html += `<div class="sec"><div class="sch">${heading}</div>${docs.length?paginatedGrid(docs,'feed'):`<div class="emp">${ic('file',28)}<p>No documents yet. Be the first to upload!</p></div>`}</div>`;
   cn.innerHTML = html;
 }
 
