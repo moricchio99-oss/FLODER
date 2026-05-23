@@ -584,12 +584,8 @@ async function buildApp() {
     return;
   }
   if(S.page === 'explore') {
-    let html = '';
-    for(const {k,l} of [{k:'word',l:'Word Documents'},{k:'excel',l:'Excel Spreadsheets'},{k:'ppt',l:'PowerPoint Presentations'},{k:'pdf',l:'PDF Documents'}]) {
-      const d = docs.filter(x=>x.file_type===k);
-      html += `<div class="sec"><div class="sch">${l}</div>${d.length?paginatedGrid(d,'expl-'+k):`<div class="emp">${ic('file',28)}<p>None yet.</p></div>`}</div>`;
-    }
-    cn.innerHTML = html;
+    const sorted = [...docs].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+    cn.innerHTML = `<div class="sec"><div class="sch">Explore all documents</div>${sorted.length?paginatedGrid(sorted,'explore'):`<div class="emp">${ic('file',28)}<p>No documents yet.</p></div>`}</div>`;
     return;
   }
   if(S.page === 'saved') {
