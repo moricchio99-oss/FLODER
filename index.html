@@ -322,11 +322,17 @@ input[type=file]{display:none}
   .type-pills{gap:5px}
   .tpill{padding:6px 14px;font-size:13px}
   /* Document page: stack viewer above info panel */
-  #DP_GRID{grid-template-columns:1fr !important}
-  /* info panel: natural flow on mobile, not sticky/scroll-trapped */
-  .dp-info{position:static !important;max-height:none !important;overflow:visible !important;padding:20px 16px !important}
+  #DP_GRID{grid-template-columns:1fr !important;display:flex !important;flex-direction:column}
+  /* Make the info panel's children participate directly in the column so we can reorder them */
+  .dp-info{display:contents !important}
+  /* Order on mobile: header (title/download/author) → viewer → footer (stats/tags/comments) */
+  #DP_GRID > div:first-child{order:2}        /* the dark viewer wrapper */
+  .dp-head{order:1;background:#fff;padding:18px 16px 0}
+  .dp-actions{order:1;background:#fff;padding:0 16px;margin-top:14px}
+  .dp-author{order:1;margin:14px 16px 4px}
+  .dp-foot{order:3;background:#fff;padding:6px 16px 24px}
   /* viewer fills the screen height on mobile */
-  #DP_VIEWER{min-height:70vh !important}
+  #DP_VIEWER{min-height:78vh !important}
   /* hide thumbnail strip in PPT viewer on mobile */
   .slides-thumbs{display:none !important}
   .slides-main{padding:14px !important}
@@ -814,20 +820,20 @@ async function buildDocPage(id) {
     
     <div class="dp-info" style="padding:28px 26px;background:#fff;display:flex;flex-direction:column;gap:18px;position:sticky;top:54px;align-self:start;max-height:calc(100vh - 54px);overflow-y:auto">
       
-      <div>
+      <div class="dp-head">
         <span style="background:${doc.file_type==='pdf'?'var(--db)':doc.file_type==='word'?'var(--wb)':doc.file_type==='excel'?'var(--eb)':'var(--pb)'};color:${doc.file_type==='pdf'?'var(--dc)':doc.file_type==='word'?'var(--wc)':doc.file_type==='excel'?'var(--ec)':'var(--pc)'};font-size:10px;font-weight:700;padding:4px 9px;border-radius:5px;letter-spacing:1.5px;text-transform:uppercase">${doc.file_type}</span>
         <h1 style="font-size:21px;font-weight:700;color:var(--tx);margin:10px 0 7px;line-height:1.25">${doc.title}</h1>
         ${doc.description?`<p style="font-size:13.5px;color:var(--tx2);margin:0;line-height:1.55">${doc.description}</p>`:''}
       </div>
       
-      <div style="display:flex;gap:8px">
+      <div class="dp-actions" style="display:flex;gap:8px">
         <a href="${doc.file_url}" target="_blank" onclick="incViews('${id}')" style="flex:1;background:var(--ac);color:white;border:none;padding:11px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;text-decoration:none">${ic('download',14)} Download .${extOf(doc.file_type)}</a>
         <button onclick="doSaveDoc('${id}',${saved})" id="dp_save_btn" style="background:#fff;color:var(--tx);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer;${saved?'background:var(--acb);color:var(--ac);border-color:var(--ac)':''}" aria-label="save">${ic(saved?'bookmark':'savi',14)}</button>
         <button onclick="doLike('${id}',${liked})" id="dp_like_btn" style="background:#fff;color:var(--tx);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer;${liked?'background:#fff0f0;color:#d12b2b;border-color:#d12b2b':''}" aria-label="like">${ic('heart',14)}</button>
         <button onclick="shareDoc()" style="background:#fff;color:var(--tx);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer" aria-label="share">${ic('open',14)}</button>
       </div>
       
-      <div onclick="goUser('${doc.user_id}')" style="display:flex;align-items:center;gap:11px;padding:11px;background:var(--sur2);border-radius:9px;cursor:pointer">
+      <div class="dp-author" onclick="goUser('${doc.user_id}')" style="display:flex;align-items:center;gap:11px;padding:11px;background:var(--sur2);border-radius:9px;cursor:pointer">
         <div class="cav3" style="${p.avatar_url?'background:transparent':'background:#0f7173'};width:36px;height:36px;font-size:13px">${p.avatar_url?`<img src="${p.avatar_url}">`:`${ini}`}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600;color:var(--tx)">${p.name||'Unknown'}</div>
@@ -836,6 +842,7 @@ async function buildDocPage(id) {
         <span style="color:var(--ac);font-size:11.5px;font-weight:500">View profile →</span>
       </div>
       
+      <div class="dp-foot" style="display:flex;flex-direction:column;gap:18px">
       <div style="display:flex;gap:18px;padding:13px 0;border-top:1px solid var(--bor);border-bottom:1px solid var(--bor)">
         <div>
           <div style="font-size:10.5px;color:var(--tx3);font-weight:600;letter-spacing:1px">VIEWS</div>
@@ -862,6 +869,7 @@ async function buildDocPage(id) {
         </div>
         ${cmts||`<div style="padding:14px;text-align:center;color:var(--tx3);font-size:12px">No comments yet.</div>`}
         ${inr}
+      </div>
       </div>
     </div>
   </div>
@@ -914,12 +922,24 @@ async function renderPdfFull(container, url) {
     const counter = container.querySelector('#pdf_counter');
     const navbar = container.querySelector('#pdf_navbar');
     // Center the floating nav pill on the viewer (not the whole window), since the
-    // info panel takes the right side on desktop.
+    // info panel takes the right side on desktop. On mobile, anchor it to the
+    // bottom of the viewer instead of floating fixed over the info below.
     const centerNav = () => {
       if(!navbar || !document.body.contains(navbar)) { window.removeEventListener('resize', centerNav); return; }
-      const r = container.getBoundingClientRect();
-      navbar.style.left = (r.left + r.width / 2) + 'px';
-      navbar.style.transform = 'translateX(-50%)';
+      if(window.innerWidth <= 760) {
+        navbar.style.position = 'sticky';
+        navbar.style.bottom = '14px';
+        navbar.style.left = '50%';
+        navbar.style.transform = 'translateX(-50%)';
+        navbar.style.marginTop = '-46px';   // overlap slightly onto the last page
+      } else {
+        navbar.style.position = 'fixed';
+        navbar.style.bottom = '24px';
+        navbar.style.marginTop = '0';
+        const r = container.getBoundingClientRect();
+        navbar.style.left = (r.left + r.width / 2) + 'px';
+        navbar.style.transform = 'translateX(-50%)';
+      }
     };
     window.addEventListener('resize', centerNav);
     requestAnimationFrame(centerNav);
@@ -1215,18 +1235,47 @@ async function renderExcelViewer(container, url) {
     const buildSheetTable = (idx) => {
       const ws = wb.Sheets[sheetNames[idx]];
       const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
-      const maxCol = range.e.c;
-      const maxRow = range.e.r;
+      // Find the real extent of actual content (some templates declare a huge
+      // !ref full of empty cells, which renders as an ugly empty grid).
+      let lastRow = 0, lastCol = 0;
+      for(let r = range.s.r; r <= range.e.r; r++) {
+        for(let c = range.s.c; c <= range.e.c; c++) {
+          const cell = ws[XLSX.utils.encode_cell({ r, c })];
+          if(cell && cell.v !== undefined && cell.v !== null && String(cell.v).trim() !== '') {
+            if(r > lastRow) lastRow = r;
+            if(c > lastCol) lastCol = c;
+          }
+        }
+      }
+      // Add a small padding of empty cells so it still looks like a spreadsheet,
+      // but cap it tightly so we don't render hundreds of blank rows/cols.
+      const maxCol = Math.min(range.e.c, lastCol + 1);
+      const maxRow = Math.min(range.e.r, lastRow + 2);
       const colWidths = (ws['!cols'] || []).map(c => c && c.wch ? c.wch : null);
       const merges = ws['!merges'] || [];
       const isMerged = (r, c) => merges.find(m => r>=m.s.r && r<=m.e.r && c>=m.s.c && c<=m.e.c);
       const isMergeHead = (r, c) => merges.find(m => r===m.s.r && c===m.s.c);
+      // Detect which columns are entirely empty (within the content range) so we
+      // can render them narrow and not waste horizontal space, especially on mobile.
+      const colHasContent = [];
+      for(let c = 0; c <= maxCol; c++) {
+        let has = false;
+        for(let r = 0; r <= maxRow; r++) {
+          const cell = ws[XLSX.utils.encode_cell({ r, c })];
+          if(cell && cell.v !== undefined && cell.v !== null && String(cell.v).trim() !== '') { has = true; break; }
+        }
+        colHasContent[c] = has;
+      }
+      const widthOf = (c) => {
+        if(!colHasContent[c]) return isMobileXls ? 22 : 34;   // empty column → thin
+        return colWidths[c] ? Math.max(minColW, colWidths[c]*(isMobileXls?5.5:7)) : baseColW;
+      };
 
       let html = `<table style="border-collapse:collapse;font-size:${cellFont}px;font-family:-apple-system,sans-serif;background:#fff">`;
       // Header row with column letters
       html += '<thead><tr><th style="background:#f1f0ec;border:1px solid #d8d5cd;min-width:34px;height:22px;position:sticky;top:0;left:0;z-index:3"></th>';
       for(let c = 0; c <= maxCol; c++) {
-        const w = colWidths[c] ? Math.max(minColW, colWidths[c]*(isMobileXls?5.5:7)) : baseColW;
+        const w = widthOf(c);
         html += `<th style="background:#f1f0ec;border:1px solid #d8d5cd;font-weight:600;color:#6b6758;font-size:11px;height:22px;min-width:${w}px;max-width:${w}px;position:sticky;top:0;z-index:2">${colLabel(c)}</th>`;
       }
       html += '</tr></thead><tbody>';
@@ -1249,7 +1298,7 @@ async function renderExcelViewer(container, url) {
           // Detect numeric for right-alignment
           const isNum = cell && cell.t === 'n';
           const bold = cell && cell.s && cell.s.font && cell.s.font.bold;
-          const w = colWidths[c] ? Math.max(minColW, colWidths[c]*(isMobileXls?5.5:7)) : baseColW;
+          const w = widthOf(c);
           const hasFormula = cell && cell.f;
           const cellContent = hasFormula ? ('=' + cell.f) : (cell ? String(cell.v !== undefined ? cell.v : '') : '');
           const dataAttr = ` data-addr="${addr}" data-content="${String(cellContent).replace(/"/g,'&quot;')}"`;
