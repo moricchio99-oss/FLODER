@@ -899,7 +899,11 @@ async function renderOfficeAsPdf(container, fileUrl, fileName, ftype, thumbUrl) 
     });
     const data = await resp.json();
     if(data.pdfUrl) {
-      renderPdfFull(container, data.pdfUrl);
+      if(ftype === 'ppt') {
+        renderSlidesViewer(container, data.pdfUrl);
+      } else {
+        renderPdfFull(container, data.pdfUrl);
+      }
     } else {
       console.warn('[FileSilver] Office→PDF conversion failed:', data.error || data);
       // Fallback to Microsoft Office Viewer
@@ -908,6 +912,121 @@ async function renderOfficeAsPdf(container, fileUrl, fileName, ftype, thumbUrl) 
   } catch(err) {
     console.warn('[FileSilver] Office→PDF error:', err.message || err);
     renderOfficeViewer(container, fileUrl, ftype, thumbUrl);
+  }
+}
+
+// ── SLIDES VIEWER (PPT → PDF, one slide at a time + thumbnail strip) ──
+async function renderSlidesViewer(container, url) {
+  if(typeof pdfjsLib === 'undefined') { renderPdfFull(container, url); return; }
+  container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:calc(100vh - 54px);color:rgba(255,255,255,0.5);font-size:13px;gap:10px">
+    <div style="width:28px;height:28px;border:3px solid rgba(255,255,255,0.2);border-top-color:rgba(255,255,255,0.7);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+    Loading slides…
+  </div>`;
+  try {
+    const pdf = await pdfjsLib.getDocument(url).promise;
+    const total = pdf.numPages;
+    let current = 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    container.innerHTML = `
+      <div style="display:flex;width:100%;height:100%;min-height:calc(100vh - 54px)">
+        <!-- Main slide area -->
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 24px;position:relative;min-width:0">
+          <canvas id="slide_main" style="max-width:100%;max-height:calc(100vh - 180px);box-shadow:0 10px 50px rgba(0,0,0,0.5);border-radius:4px;background:#fff"></canvas>
+        </div>
+        <!-- Thumbnail strip -->
+        <div id="slide_thumbs" style="width:148px;flex-shrink:0;background:rgba(0,0,0,0.25);overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 54px)"></div>
+      </div>
+      <!-- Floating nav pill -->
+      <div style="position:fixed;bottom:24px;left:calc((100% - 160px) * 0.5);transform:translateX(-50%);z-index:50;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);display:flex;align-items:center;gap:14px;padding:9px 14px;border-radius:30px;color:#fff;font-size:12.5px;box-shadow:0 4px 20px rgba(0,0,0,0.35)">
+        <button id="slide_prev" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">‹</button>
+        <span id="slide_counter" style="min-width:90px;text-align:center;font-weight:500">Slide ${current} of ${total}</span>
+        <button id="slide_next" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">›</button>
+      </div>
+    `;
+
+    const mainCanvas = container.querySelector('#slide_main');
+    const counter = container.querySelector('#slide_counter');
+    const thumbsBox = container.querySelector('#slide_thumbs');
+
+    // Render the big main slide
+    const renderMain = async (n) => {
+      const page = await pdf.getPage(n);
+      const base = page.getViewport({ scale: 1 });
+      const targetWidth = 1100;
+      const scale = (targetWidth / base.width) * dpr;
+      const viewport = page.getViewport({ scale });
+      mainCanvas.width = viewport.width;
+      mainCanvas.height = viewport.height;
+      mainCanvas.style.width = (viewport.width / dpr) + 'px';
+      mainCanvas.style.height = (viewport.height / dpr) + 'px';
+      await page.render({ canvasContext: mainCanvas.getContext('2d'), viewport }).promise;
+      counter.textContent = `Slide ${n} of ${total}`;
+    };
+
+    // Highlight active thumbnail
+    const updateThumbHighlight = () => {
+      thumbsBox.querySelectorAll('[data-thumb]').forEach(t => {
+        const active = parseInt(t.dataset.thumb) === current;
+        t.style.outline = active ? '2px solid #0f7173' : '2px solid transparent';
+        t.style.opacity = active ? '1' : '0.62';
+      });
+    };
+
+    const goTo = async (n) => {
+      current = Math.max(1, Math.min(total, n));
+      await renderMain(current);
+      updateThumbHighlight();
+      const active = thumbsBox.querySelector(`[data-thumb="${current}"]`);
+      if(active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    };
+
+    container.querySelector('#slide_prev').onclick = () => goTo(current - 1);
+    container.querySelector('#slide_next').onclick = () => goTo(current + 1);
+    // Keyboard arrows
+    const keyHandler = (e) => {
+      // Auto-detach if this slide viewer is no longer in the DOM
+      if(!document.body.contains(mainCanvas)) {
+        document.removeEventListener('keydown', keyHandler);
+        return;
+      }
+      if(e.key === 'ArrowRight' || e.key === 'ArrowDown') goTo(current + 1);
+      if(e.key === 'ArrowLeft' || e.key === 'ArrowUp') goTo(current - 1);
+    };
+    document.addEventListener('keydown', keyHandler);
+
+    // Render the main slide first (fast feedback)
+    await renderMain(1);
+
+    // Then build thumbnails progressively
+    for(let n = 1; n <= total; n++) {
+      const wrap = document.createElement('div');
+      wrap.dataset.thumb = n;
+      wrap.style.cssText = 'cursor:pointer;border-radius:5px;overflow:hidden;flex-shrink:0;outline:2px solid transparent;transition:opacity 0.15s,outline 0.15s;position:relative;background:#fff';
+      wrap.style.opacity = n === 1 ? '1' : '0.62';
+      if(n === 1) wrap.style.outline = '2px solid #0f7173';
+      const tc = document.createElement('canvas');
+      tc.style.cssText = 'width:100%;display:block';
+      wrap.appendChild(tc);
+      const label = document.createElement('div');
+      label.textContent = n;
+      label.style.cssText = 'position:absolute;bottom:3px;right:4px;background:rgba(0,0,0,0.6);color:#fff;font-size:9px;padding:1px 5px;border-radius:4px';
+      wrap.appendChild(label);
+      wrap.onclick = () => goTo(n);
+      thumbsBox.appendChild(wrap);
+
+      const page = await pdf.getPage(n);
+      const base = page.getViewport({ scale: 1 });
+      const tScale = (124 / base.width) * dpr;
+      const tv = page.getViewport({ scale: tScale });
+      tc.width = tv.width;
+      tc.height = tv.height;
+      tc.style.height = (tv.height / dpr) + 'px';
+      await page.render({ canvasContext: tc.getContext('2d'), viewport: tv }).promise;
+    }
+  } catch(err) {
+    console.warn('[FileSilver] Slides render failed:', err.message || err);
+    renderPdfFull(container, url);
   }
 }
 
