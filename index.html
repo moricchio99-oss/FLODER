@@ -427,6 +427,7 @@ window.addEventListener('popstate', () => {
 
 // ── INIT ──
 async function init() {
+  console.log('%cFileSilver build: mobile-doc-v2 (viewer altezza adattiva)', 'color:#0f7173;font-weight:bold');
   parseUrl();
   const { data: { session } } = await sb.auth.getSession();
   if (session) await loadProfile(session.user);
@@ -797,6 +798,8 @@ function openDoc(id) {
 // ── BUILD DOCUMENT DETAIL PAGE ──
 async function buildDocPage(id) {
   await incViews(id);
+  const isMobileDP = window.innerWidth <= 760;
+  const vwMinH = isMobileDP ? '' : 'min-height:calc(100vh - 54px)';
   const { data: doc } = await sb.from('documents')
     .select('*, profiles(id,name,avatar_url,bio), likes(user_id), saves:document_saves(user_id), comments(id,content,created_at,profiles(id,name,avatar_url))')
     .eq('id', id).single();
@@ -837,8 +840,8 @@ async function buildDocPage(id) {
   container.innerHTML = `
   <div style="display:grid;grid-template-columns:2.4fr 1fr;align-items:start" id="DP_GRID">
     
-    <div style="background:#2a2a2a;padding:0;display:flex;flex-direction:column;min-height:calc(100vh - 54px)">
-      <div id="DP_VIEWER" style="flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:calc(100vh - 54px)">
+    <div style="background:#2a2a2a;padding:0;display:flex;flex-direction:column;${vwMinH}">
+      <div id="DP_VIEWER" style="flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;${vwMinH}">
       </div>
     </div>
     
@@ -1363,7 +1366,7 @@ async function renderExcelViewer(container, url) {
     ).join('');
 
     container.innerHTML = `
-      <div class="xls-root" style="width:100%;flex:1;display:flex;flex-direction:column;min-height:calc(100vh - 54px)">
+      <div class="xls-root" style="width:100%;flex:1;display:flex;flex-direction:column;${isMobileXls?'':'min-height:calc(100vh - 54px)'}">
         <div class="xls-fxbar" style="display:flex;align-items:center;gap:11px;margin:20px 20px 0;background:#fff;border-radius:12px 12px 0 0;padding:12px 16px;border-bottom:1px solid #eceae4">
           <div id="xls_addr" style="background:#e8f3ef;color:#107c41;font-size:12px;font-weight:700;padding:5px 11px;border-radius:7px;min-width:46px;text-align:center;letter-spacing:0.3px;transition:all 0.12s">—</div>
           <div style="width:1px;height:18px;background:#eceae4;flex-shrink:0"></div>
