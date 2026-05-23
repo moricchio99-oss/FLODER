@@ -270,6 +270,48 @@ input[type=file]{display:none}
 .feat-icon svg{width:16px;height:16px;stroke:var(--ac);fill:none;stroke-width:1.8;stroke-linecap:round}
 .feat-t{font-size:12.5px;font-weight:700;color:var(--tx);margin-bottom:3px}
 .feat-d{font-size:11px;color:var(--tx3);line-height:1.5}
+
+/* ── Hamburger button (hidden on desktop) ── */
+.hamb{display:none;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;color:var(--tx2);padding:6px;border-radius:7px;flex-shrink:0;margin-right:-4px}
+.hamb:hover{background:var(--sur2)}
+.hamb svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:150}
+
+/* ── MOBILE ── */
+@media (max-width:760px){
+  .hamb{display:flex}
+  .nav{padding:0 12px;gap:10px}
+  /* hide the search bar in the navbar on mobile (it pushes everything off-screen) */
+  .sw{display:none}
+  .logo-word{font-size:16px}
+  .nr{gap:5px}
+  .btn{padding:6px 10px;font-size:12px}
+  .nr .btn:not(.btna){display:none}            /* hide "Sign in", keep primary action */
+  /* Off-canvas sidebar: slides in from the left */
+  #SB_WRAP{position:fixed;top:54px;left:0;bottom:0;z-index:160;transform:translateX(-100%);transition:transform .22s ease;box-shadow:0 0 24px rgba(0,0,0,.12)}
+  body.sb-open #SB_WRAP{transform:translateX(0)}
+  body.sb-open .sb-overlay{display:block}
+  #SB_WRAP aside{width:248px !important;height:100%;overflow-y:auto;font-size:15px}
+  #SB_WRAP .si2{font-size:14.5px;padding:10px 12px}
+  #SB_WRAP .si2 svg{width:17px;height:17px}
+  #SB_WRAP .ss{font-size:10.5px;padding:14px 12px 5px}
+  /* Content: full width, less padding */
+  #CN{padding:14px 14px !important}
+  /* Cards: single column, full width */
+  .grid{grid-template-columns:1fr !important;gap:14px}
+  .toolbar{gap:9px;margin-bottom:16px}
+  .type-pills{gap:5px}
+  .tpill{padding:6px 14px;font-size:13px}
+  /* Document page: stack viewer above info panel */
+  #DP_GRID{grid-template-columns:1fr !important}
+  /* info panel: natural flow on mobile, not sticky/scroll-trapped */
+  .dp-info{position:static !important;max-height:none !important;overflow:visible !important;padding:20px 16px !important}
+  /* viewer fills the screen height on mobile */
+  #DP_VIEWER{min-height:70vh !important}
+  /* hide thumbnail strip in PPT viewer on mobile */
+  .slides-thumbs{display:none !important}
+  .slides-main{padding:14px !important}
+}
 </style>
 </head>
 <body>
@@ -370,6 +412,7 @@ const I = {
   refresh: `<path d="M2 8a6 6 0 1010.7-3.7M14 2v4h-4"/>`,
   share: `<circle cx="14" cy="3" r="1.5"/><circle cx="14" cy="13" r="1.5"/><circle cx="2" cy="8" r="1.5"/><line x1="3.5" y1="8.9" x2="12.5" y2="12.1"/><line x1="12.5" y1="3.9" x2="3.5" y2="7.1"/>`,
   back: `<path d="M10 13L5 8l5-5"/>`,
+  menu: `<path d="M2 4h12M2 8h12M2 12h12"/>`,
   open: `<path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1v-3M9 2h5v5M14 2L7 9"/>`,
 };
 function ic(n, w=14, x='') {
@@ -494,6 +537,7 @@ function buildNav() {
     : `<button class="btn" onclick="openAuth()">Sign in</button>
        <button class="btn btna" onclick="openAuth()">Get started</button>`;
   document.getElementById('NV').innerHTML = `<nav class="nav">
+    ${S.page !== 'doc' ? `<button class="hamb" onclick="toggleSidebar()" aria-label="Menu">${ic('menu',18)}</button>` : ''}
     <div class="logo" onclick="goto('home')">${LOGO_MARK}<span class="logo-word"><span style="color:#b0b8cc">File</span><span style="color:#0f7173">Silver</span></span></div>
     ${S.page === 'doc' ? `<button class="btn" onclick="goBack()" style="display:flex;align-items:center;gap:5px;padding:7px 13px;font-size:12.5px;flex-shrink:0">${ic('back',13)} Back</button>` : ''}
     <div class="sw"><input class="sinp" placeholder="Search documents, authors, tags…" value="${S.search}" oninput="doSearch(this.value)" autocomplete="off"></div>
@@ -579,7 +623,7 @@ async function buildApp() {
     app.innerHTML = landingHTML();
     return;
   }
-  app.innerHTML = `<div style="display:flex"><div id="SB_WRAP"></div><div id="CN" style="flex:1;min-width:0;padding:20px 24px"></div></div>`;
+  app.innerHTML = `<div style="display:flex"><div class="sb-overlay" onclick="closeSidebar()"></div><div id="SB_WRAP"></div><div id="CN" style="flex:1;min-width:0;padding:20px 24px"></div></div>`;
   const docs = await fetchDocs({ type: S.tf, search: S.search, sort: S.sort });
   const counts = { all: docs.length };
   ['word','excel','ppt','pdf'].forEach(t => counts[t] = docs.filter(d=>d.file_type===t).length);
@@ -734,7 +778,7 @@ async function buildDocPage(id) {
       </div>
     </div>
     
-    <div style="padding:28px 26px;background:#fff;display:flex;flex-direction:column;gap:18px;position:sticky;top:54px;align-self:start;max-height:calc(100vh - 54px);overflow-y:auto">
+    <div class="dp-info" style="padding:28px 26px;background:#fff;display:flex;flex-direction:column;gap:18px;position:sticky;top:54px;align-self:start;max-height:calc(100vh - 54px);overflow-y:auto">
       
       <div>
         <span style="background:${doc.file_type==='pdf'?'var(--db)':doc.file_type==='word'?'var(--wb)':doc.file_type==='excel'?'var(--eb)':'var(--pb)'};color:${doc.file_type==='pdf'?'var(--dc)':doc.file_type==='word'?'var(--wc)':doc.file_type==='excel'?'var(--ec)':'var(--pc)'};font-size:10px;font-weight:700;padding:4px 9px;border-radius:5px;letter-spacing:1.5px;text-transform:uppercase">${doc.file_type}</span>
@@ -951,9 +995,9 @@ async function renderSlidesViewer(container, url) {
     container.innerHTML = `
       <div style="display:flex;width:100%;height:100%;min-height:calc(100vh - 54px)">
         <!-- Thumbnail strip (left) -->
-        <div id="slide_thumbs" style="width:118px;flex-shrink:0;background:rgba(0,0,0,0.22);overflow-y:auto;padding:12px 9px;display:flex;flex-direction:column;gap:9px;max-height:calc(100vh - 54px)"></div>
+        <div id="slide_thumbs" class="slides-thumbs" style="width:118px;flex-shrink:0;background:rgba(0,0,0,0.22);overflow-y:auto;padding:12px 9px;display:flex;flex-direction:column;gap:9px;max-height:calc(100vh - 54px)"></div>
         <!-- Main slide area -->
-        <div id="slide_area" style="flex:1;display:flex;align-items:center;justify-content:center;padding:28px;position:relative;min-width:0;min-height:calc(100vh - 54px)">
+        <div id="slide_area" class="slides-main" style="flex:1;display:flex;align-items:center;justify-content:center;padding:28px;position:relative;min-width:0;min-height:calc(100vh - 54px)">
           <canvas id="slide_main" style="box-shadow:0 10px 50px rgba(0,0,0,0.5);border-radius:4px;background:#fff;display:block"></canvas>
           <!-- Floating nav pill (centered on the slide area) -->
           <div style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:50;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);display:flex;align-items:center;gap:14px;padding:9px 14px;border-radius:30px;color:#fff;font-size:12.5px;box-shadow:0 4px 20px rgba(0,0,0,0.35)">
@@ -975,9 +1019,12 @@ async function renderSlidesViewer(container, url) {
       const page = await pdf.getPage(n);
       const base = page.getViewport({ scale: 1 });
       const aspect = base.width / base.height;
-      // Available space in the main area (minus padding)
-      const availW = slideArea.clientWidth - 56;
-      const availH = slideArea.clientHeight - 56;
+      // Available space in the main area (minus actual padding)
+      const cs = getComputedStyle(slideArea);
+      const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+      const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      const availW = slideArea.clientWidth - padX;
+      const availH = slideArea.clientHeight - padY;
       // Fit within both constraints
       let dispW = availW;
       let dispH = dispW / aspect;
@@ -1249,6 +1296,13 @@ function goBack() {
   goHome();
 }
 
+function toggleSidebar() {
+  document.body.classList.toggle('sb-open');
+}
+function closeSidebar() {
+  document.body.classList.remove('sb-open');
+}
+
 function shareDoc() {
   const url = window.location.href;
   if(navigator.share) {
@@ -1499,9 +1553,10 @@ async function saveProfile() {
 function goto(p){
   S.page=p;S.vu=null;S.search='';S.docId=null;
   if(window.location.pathname !== '/') history.pushState({}, '', '/');
+  closeSidebar();
   render();
 }
-function setTF(f){S.tf=f;if(!['home','trending','explore'].includes(S.page))S.page='home';render();}
+function setTF(f){S.tf=f;if(!['home','trending','explore'].includes(S.page))S.page='home';closeSidebar();render();}
 function setSort(v){S.sort=v;render();}
 function doSearch(v){
   S.search=v;S.page='home';S.docId=null;
