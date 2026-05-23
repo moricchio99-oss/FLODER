@@ -974,14 +974,13 @@ async function renderExcelViewer(container, url) {
 
     container.innerHTML = `
       <div style="width:100%;flex:1;display:flex;flex-direction:column;min-height:calc(100vh - 54px)">
-        <div style="display:flex;align-items:center;gap:0;margin:20px 20px 0;background:#fff;border-radius:8px 8px 0 0;border-bottom:1px solid #e2e0d8;overflow:hidden">
-          <div style="background:#f1f0ec;color:#6b6758;font-size:12px;font-weight:600;padding:8px 12px;min-width:54px;text-align:center;border-right:1px solid #e2e0d8" id="xls_addr">—</div>
-          <div style="display:flex;align-items:center;gap:7px;padding:8px 12px;flex:1;min-width:0">
-            <span style="font-style:italic;color:#a09c90;font-size:13px;font-weight:600">fx</span>
-            <span id="xls_formula" style="font-size:12.5px;color:#18170f;font-family:'SF Mono',Menlo,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">Click a cell to see its content or formula</span>
-          </div>
+        <div style="display:flex;align-items:center;gap:11px;margin:20px 20px 0;background:#fff;border-radius:12px 12px 0 0;padding:12px 16px;border-bottom:1px solid #eceae4">
+          <div id="xls_addr" style="background:#e8f3ef;color:#107c41;font-size:12px;font-weight:700;padding:5px 11px;border-radius:7px;min-width:46px;text-align:center;letter-spacing:0.3px;transition:all 0.12s">—</div>
+          <div style="width:1px;height:18px;background:#eceae4;flex-shrink:0"></div>
+          <span style="font-style:italic;color:#c2bdb2;font-size:14px;font-weight:600;font-family:Georgia,serif;flex-shrink:0">fx</span>
+          <span id="xls_formula" style="font-size:13px;color:#9a958a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;font-weight:450">Click a cell to inspect its value or formula</span>
         </div>
-        <div style="background:#fff;flex:1;margin:0 20px;border-radius:0 0 8px 8px;overflow:auto;box-shadow:0 8px 40px rgba(0,0,0,0.4);max-height:calc(100vh - 180px)">
+        <div style="background:#fff;flex:1;margin:0 20px;border-radius:0 0 12px 12px;overflow:auto;box-shadow:0 8px 40px rgba(0,0,0,0.4);max-height:calc(100vh - 180px)">
           <div id="xls_table" style="overflow:auto;width:100%;height:100%">${buildSheetTable(activeSheet)}</div>
         </div>
         ${sheetNames.length > 1 ? `<div style="display:flex;gap:4px;padding:14px 20px 16px;flex-wrap:wrap" id="xls_tabs">${tabsHtml}</div>` : '<div style="height:16px"></div>'}
@@ -998,16 +997,23 @@ async function renderExcelViewer(container, url) {
           if(selectedCell) selectedCell.style.outline = '';
           selectedCell = td;
           td.style.outline = '2px solid #107c41';
-          td.style.outlineOffset = '-2px';
+          td.style.outlineOffset = '-1px';
           const addr = td.dataset.addr || '';
           const content = td.dataset.content || '';
           addrBox.textContent = addr || '—';
           if(content) {
+            const isFormula = content.startsWith('=');
             formulaBox.textContent = content;
-            formulaBox.style.color = content.startsWith('=') ? '#107c41' : '#18170f';
+            formulaBox.style.color = isFormula ? '#107c41' : '#18170f';
+            formulaBox.style.fontWeight = isFormula ? '600' : '500';
+            formulaBox.style.fontFamily = isFormula ? "'SF Mono',ui-monospace,Menlo,monospace" : 'inherit';
+            formulaBox.style.fontSize = isFormula ? '12.5px' : '13px';
           } else {
-            formulaBox.textContent = '(empty)';
-            formulaBox.style.color = '#a09c90';
+            formulaBox.textContent = 'Empty cell';
+            formulaBox.style.color = '#c2bdb2';
+            formulaBox.style.fontWeight = '450';
+            formulaBox.style.fontFamily = 'inherit';
+            formulaBox.style.fontSize = '13px';
           }
         };
       });
@@ -1021,8 +1027,11 @@ async function renderExcelViewer(container, url) {
           container.querySelector('#xls_table').innerHTML = buildSheetTable(activeSheet);
           selectedCell = null;
           addrBox.textContent = '—';
-          formulaBox.textContent = 'Click a cell to see its content or formula';
-          formulaBox.style.color = '#18170f';
+          formulaBox.textContent = 'Click a cell to inspect its value or formula';
+          formulaBox.style.color = '#9a958a';
+          formulaBox.style.fontWeight = '450';
+          formulaBox.style.fontFamily = 'inherit';
+          formulaBox.style.fontSize = '13px';
           attachCellHandlers();
           container.querySelectorAll('.xls-tab').forEach((b, i) => {
             b.style.background = i===activeSheet ? '#fff' : 'rgba(255,255,255,0.08)';
