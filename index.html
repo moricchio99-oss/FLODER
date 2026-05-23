@@ -331,11 +331,21 @@ input[type=file]{display:none}
   .dp-actions{order:1;background:#fff;padding:0 16px;margin-top:14px}
   .dp-author{order:1;margin:14px 16px 4px}
   .dp-foot{order:3;background:#fff;padding:6px 16px 24px}
-  /* viewer fills the screen height on mobile */
-  #DP_VIEWER{min-height:78vh !important}
+  /* MOBILE VIEWER FIX: the dark viewer must hug its content, not force a full
+     screen of empty black space. We override every inline `min-height:100vh`
+     that was meant for the desktop side-by-side layout. */
+  #DP_GRID > div:first-child{min-height:0 !important}   /* dark wrapper */
+  #DP_VIEWER{min-height:0 !important}
+  #DP_VIEWER > div{min-height:0 !important}              /* loaders, slide flex row, pdf box, iframe wrappers */
+  #DP_VIEWER > div{height:auto !important}               /* PPT flex row had height:100% which collapses to 0 here */
+  /* Excel keeps a controlled, scrollable height (its inner sheet scrolls). */
+  #DP_VIEWER > .xls-root{height:auto !important;min-height:0 !important}
+  /* PPT: let the slide area be as tall as the slide itself (no giant black gap) */
+  .slides-main{padding:12px !important;min-height:0 !important;height:auto !important}
   /* hide thumbnail strip in PPT viewer on mobile */
   .slides-thumbs{display:none !important}
-  .slides-main{padding:14px !important}
+  /* fallback Office iframe still needs a usable height on mobile */
+  #DP_VIEWER iframe{min-height:70vh !important}
   /* Cards: bigger preview + more tappable buttons on full-width mobile cards */
   .cth{height:220px !important}
   .ctitle{font-size:15px !important;min-height:auto !important}
@@ -1097,10 +1107,18 @@ async function renderSlidesViewer(container, url) {
       const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
       const availW = slideArea.clientWidth - padX;
       const availH = slideArea.clientHeight - padY;
+      const isMobileSlide = window.innerWidth <= 760;
       // Fit within both constraints
       let dispW = availW;
       let dispH = dispW / aspect;
-      if(dispH > availH) { dispH = availH; dispW = dispH * aspect; }
+      if(isMobileSlide) {
+        // On mobile the viewer hugs its content, so size the slide purely by the
+        // available width — the container grows to match. No giant black gap.
+        dispW = availW;
+        dispH = dispW / aspect;
+      } else {
+        if(dispH > availH) { dispH = availH; dispW = dispH * aspect; }
+      }
       // Render at higher res for sharpness
       const scale = (dispW / base.width) * dpr;
       const viewport = page.getViewport({ scale });
@@ -1316,7 +1334,7 @@ async function renderExcelViewer(container, url) {
     ).join('');
 
     container.innerHTML = `
-      <div style="width:100%;flex:1;display:flex;flex-direction:column;min-height:calc(100vh - 54px)">
+      <div class="xls-root" style="width:100%;flex:1;display:flex;flex-direction:column;min-height:calc(100vh - 54px)">
         <div class="xls-fxbar" style="display:flex;align-items:center;gap:11px;margin:20px 20px 0;background:#fff;border-radius:12px 12px 0 0;padding:12px 16px;border-bottom:1px solid #eceae4">
           <div id="xls_addr" style="background:#e8f3ef;color:#107c41;font-size:12px;font-weight:700;padding:5px 11px;border-radius:7px;min-width:46px;text-align:center;letter-spacing:0.3px;transition:all 0.12s">—</div>
           <div style="width:1px;height:18px;background:#eceae4;flex-shrink:0"></div>
