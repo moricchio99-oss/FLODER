@@ -277,9 +277,17 @@ input[type=file]{display:none}
 .hamb svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
 .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:150}
 
+/* Floating menu button (mobile only) — stays reachable while scrolling */
+#FAB_MENU{display:none;position:fixed;left:16px;bottom:20px;z-index:170;width:50px;height:50px;border-radius:50%;background:var(--ac);border:none;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(15,113,115,.4)}
+#FAB_MENU svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round}
+#FAB_MENU:active{transform:scale(.94)}
+
 /* ── MOBILE ── */
 @media (max-width:760px){
-  .hamb{display:flex}
+  .hamb{display:none}              /* use the floating button instead of the navbar one */
+  #FAB_MENU{display:flex}
+  body.sb-open #FAB_MENU{display:none}     /* hide FAB while menu is open */
+  body.page-doc #FAB_MENU{display:none}    /* hide FAB on document pages (Back button is there) */
   .nav{padding:0 12px;gap:10px}
   /* hide the search bar in the navbar on mobile (it pushes everything off-screen) */
   .sw{display:none}
@@ -319,6 +327,9 @@ input[type=file]{display:none}
 <div id="NV"></div>
 <div id="APP"></div>
 <div class="twr" id="TW"></div>
+<button id="FAB_MENU" onclick="toggleSidebar()" aria-label="Menu">
+  <svg viewBox="0 0 16 16"><path d="M2 4h12M2 8h12M2 12h12"/></svg>
+</button>
 
 
 <script>
@@ -537,7 +548,6 @@ function buildNav() {
     : `<button class="btn" onclick="openAuth()">Sign in</button>
        <button class="btn btna" onclick="openAuth()">Get started</button>`;
   document.getElementById('NV').innerHTML = `<nav class="nav">
-    ${S.page !== 'doc' ? `<button class="hamb" onclick="toggleSidebar()" aria-label="Menu">${ic('menu',18)}</button>` : ''}
     <div class="logo" onclick="goto('home')">${LOGO_MARK}<span class="logo-word"><span style="color:#b0b8cc">File</span><span style="color:#0f7173">Silver</span></span></div>
     ${S.page === 'doc' ? `<button class="btn" onclick="goBack()" style="display:flex;align-items:center;gap:5px;padding:7px 13px;font-size:12.5px;flex-shrink:0">${ic('back',13)} Back</button>` : ''}
     <div class="sw"><input class="sinp" placeholder="Search documents, authors, tags…" value="${S.search}" oninput="doSearch(this.value)" autocomplete="off"></div>
@@ -612,6 +622,8 @@ async function render() {
 
 async function buildApp() {
   const app = document.getElementById('APP');
+  // Toggle body class so the floating menu button hides on document pages
+  document.body.classList.toggle('page-doc', S.page === 'doc' && !!S.docId);
   // Document page - full layout, no sidebar
   if(S.page === 'doc' && S.docId) {
     app.innerHTML = `<div id="DOC_PAGE"></div>`;
@@ -866,9 +878,11 @@ async function renderPdfFull(container, url) {
     const pdf = await pdfjsLib.getDocument(url).promise;
     const total = pdf.numPages;
     let current = 1;
+    const isMobile = window.innerWidth <= 760;
+    const pad = isMobile ? 8 : 24;
     container.innerHTML = `
-      <div id="pdf_pages" style="width:100%;padding:24px;display:flex;flex-direction:column;align-items:center;gap:20px"></div>
-      <div style="position:fixed;bottom:24px;left:35%;transform:translateX(-50%);z-index:50;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);display:flex;align-items:center;gap:14px;padding:9px 14px;border-radius:30px;color:#fff;font-size:12.5px;box-shadow:0 4px 20px rgba(0,0,0,0.35)" id="pdf_navbar">
+      <div id="pdf_pages" style="width:100%;padding:${pad}px;display:flex;flex-direction:column;align-items:center;gap:${isMobile?12:20}px"></div>
+      <div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:50;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);display:flex;align-items:center;gap:14px;padding:9px 14px;border-radius:30px;color:#fff;font-size:12.5px;box-shadow:0 4px 20px rgba(0,0,0,0.35)" id="pdf_navbar">
         <button id="pdf_prev" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">‹</button>
         <span id="pdf_counter" style="min-width:84px;text-align:center;font-weight:500">Page ${current} of ${total}</span>
         <button id="pdf_next" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">›</button>
@@ -878,11 +892,16 @@ async function renderPdfFull(container, url) {
     const counter = container.querySelector('#pdf_counter');
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
+    // Target width = actual available width of the container (responsive),
+    // capped at 820 on desktop so it doesn't get huge on wide screens.
+    let availWidth = pagesBox.clientWidth - pad * 2;
+    if(availWidth < 200) availWidth = Math.min(window.innerWidth, 820) - pad * 2; // fallback if layout not settled
+    const targetWidth = Math.min(availWidth, 820);
+
     // Render ALL pages stacked vertically (natural scroll)
     for(let n = 1; n <= total; n++) {
       const page = await pdf.getPage(n);
       const baseViewport = page.getViewport({ scale: 1 });
-      const targetWidth = 780;
       const scale = (targetWidth / baseViewport.width) * dpr;
       const viewport = page.getViewport({ scale });
       const canvas = document.createElement('canvas');
@@ -891,7 +910,7 @@ async function renderPdfFull(container, url) {
       canvas.style.width = (viewport.width / dpr) + 'px';
       canvas.style.height = (viewport.height / dpr) + 'px';
       canvas.style.maxWidth = '100%';
-      canvas.style.boxShadow = '0 8px 40px rgba(0,0,0,0.4)';
+      canvas.style.boxShadow = isMobile ? '0 2px 14px rgba(0,0,0,0.3)' : '0 8px 40px rgba(0,0,0,0.4)';
       canvas.style.borderRadius = '3px';
       canvas.style.background = '#fff';
       canvas.dataset.page = n;
