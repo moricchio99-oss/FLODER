@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <!-- Primary SEO -->
-<title>FileSilver — Share & Discover Professional Documents</title>
-<meta name="description" content="FileSilver is the home for professional documents. Upload, discover and download Word, Excel, PowerPoint and PDF files shared by your community. Free pitch decks, financial models, HR templates and more.">
-<meta name="keywords" content="document sharing, pitch deck template, financial model excel, HR templates, PDF download, Word templates, professional documents, free templates, business documents">
+<title>FileSilver — Spreadsheets, Docs &amp; Templates</title>
+<meta name="description" content="Find the spreadsheet you need. Free Excel models, trackers, budgets and templates — plus Word docs, PowerPoint slides and PDFs for every office task. Shared by professionals.">
+<meta name="keywords" content="excel templates, spreadsheet templates, financial model excel, budget tracker, free excel models, google sheets templates, office templates, business spreadsheets, document sharing, powerpoint templates, word templates">
 <meta name="author" content="FileSilver">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://filesilver.com">
@@ -16,8 +16,8 @@
 <!-- Open Graph (Facebook, LinkedIn) -->
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://filesilver.com">
-<meta property="og:title" content="FileSilver — Share & Discover Professional Documents">
-<meta property="og:description" content="Upload, discover and download professional documents. Free pitch decks, financial models, HR templates, legal checklists and more — shared by your community.">
+<meta property="og:title" content="FileSilver — Spreadsheets, Docs &amp; Templates">
+<meta property="og:description" content="Find the spreadsheet you need. Free Excel models, trackers and budgets — plus docs and slides for every office task. Shared by professionals.">
 <meta property="og:image" content="https://filesilver.com/og-image.png">
 <meta property="og:site_name" content="Filesilver">
 <meta property="og:locale" content="en_US">
@@ -25,8 +25,8 @@
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:url" content="https://filesilver.com">
-<meta name="twitter:title" content="FileSilver — Share & Discover Professional Documents">
-<meta name="twitter:description" content="Upload, discover and download professional documents. Free pitch decks, financial models, HR templates and more.">
+<meta name="twitter:title" content="FileSilver — Spreadsheets, Docs &amp; Templates">
+<meta name="twitter:description" content="Find the spreadsheet you need. Free Excel models, trackers and budgets — plus docs and slides for every office task.">
 <meta name="twitter:image" content="https://filesilver.com/og-image.png">
 
 <!-- Structured Data -->
@@ -505,7 +505,7 @@ function buildSB(counts) {
   let h = [{n:'home',l:'Home'},{n:'trending',l:'Trending'},{n:'explore',l:'Explore'},{n:'bookmark',l:'Saved',p:'saved'}]
     .map(x => {const p=x.p||x.n;return `<button class="si2 ${S.page===p?'on':''}" onclick="goto('${p}')">${ic(x.n,14)} <span>${x.l}</span></button>`;}).join('');
   h += '<div class="ss">File type</div>';
-  [{ic:'file',l:'All files',f:'all'},{ic:'word',l:'Word',f:'word'},{ic:'excel',l:'Excel',f:'excel'},{ic:'ppt',l:'PowerPoint',f:'ppt'},{ic:'pdf',l:'PDF',f:'pdf'}].forEach(x => {
+  [{ic:'file',l:'All files',f:'all'},{ic:'excel',l:'Excel',f:'excel'},{ic:'word',l:'Word',f:'word'},{ic:'ppt',l:'PowerPoint',f:'ppt'},{ic:'pdf',l:'PDF',f:'pdf'}].forEach(x => {
     const on = S.tf===x.f && !['trending','explore','saved','profile','user'].includes(S.page);
     h += `<button class="si2 ${on?'on':''}" onclick="setTF('${x.f}')">${ic(x.ic,14)} <span>${x.l}</span>${counts?`<span class="sbg">${counts[x.f]||0}</span>`:''}</button>`;
   });
@@ -600,6 +600,10 @@ async function buildApp() {
   const trend = [...docs].sort((a,b)=>(b.views||0)-(a.views||0));
   let html = toolbar();
   if(S.tf==='all' && !S.search) {
+    const sheets = docs.filter(d=>d.file_type==='excel').sort((a,b)=>(b.views||0)-(a.views||0));
+    if(sheets.length) {
+      html += `<div class="sec"><div class="sch">${ic('excel',15)} Popular spreadsheets <small>${sheets.length}</small></div>${paginatedGrid(sheets,'sheets-home')}</div>`;
+    }
     html += `<div class="sec"><div class="sch">Trending this week <small>${trend.length}</small></div>${paginatedGrid(trend,'trend-home')}</div>`;
   }
   html += `<div class="sec"><div class="sch">${S.search?'Search results':S.tf==='all'?'Recent uploads':'Filtered results'} <small>${docs.length}</small></div>${docs.length?paginatedGrid(docs,'rec'):`<div class="emp">${ic('file',28)}<p>No documents yet. Be the first to upload!</p></div>`}</div>`;
@@ -611,16 +615,16 @@ function landingHTML() {
   return `<div style="display:flex"><div style="width:188px;flex-shrink:0;border-right:1px solid var(--bor);background:#fff;min-height:calc(100vh - 54px)"></div>
   <div class="landing">
     <div style="font-size:40px;margin-bottom:16px">${LOGO_MARK}</div>
-    <h1>Share documents.<br>Find what <span>matters</span>.</h1>
-    <p>FileSilver is the home for professional documents. Upload, discover and download Word, Excel, PowerPoint and PDF files shared by your community.</p>
+    <h1>Find the <span>spreadsheet</span><br>you need.</h1>
+    <p>Models, trackers, budgets and templates — plus docs and slides for every office task. Free to use, shared by professionals.</p>
     <div class="landing-btns">
       <button class="btn btna" style="padding:10px 24px;font-size:13px" onclick="openAuth()">Get started — it's free</button>
       <button class="btn" style="padding:10px 24px;font-size:13px" onclick="openAuth()">Sign in</button>
     </div>
     <div class="feat">
-      <div class="feat-card"><div class="feat-icon">${ic('upload',16)}</div><div class="feat-t">Upload any format</div><div class="feat-d">Word, Excel, PowerPoint, PDF — all supported.</div></div>
-      <div class="feat-card"><div class="feat-icon">${ic('eye',16)}</div><div class="feat-t">Discover documents</div><div class="feat-d">Browse trending files from your community.</div></div>
-      <div class="feat-card"><div class="feat-icon">${ic('bookmark',16)}</div><div class="feat-t">Save for later</div><div class="feat-d">Build your personal library of useful docs.</div></div>
+      <div class="feat-card"><div class="feat-icon">${ic('excel',16)}</div><div class="feat-t">Spreadsheets that work</div><div class="feat-d">Excel models, budgets and trackers — view formulas live in your browser.</div></div>
+      <div class="feat-card"><div class="feat-icon">${ic('eye',16)}</div><div class="feat-t">Preview before download</div><div class="feat-d">Read any file in full, page by page, before you grab it.</div></div>
+      <div class="feat-card"><div class="feat-icon">${ic('bookmark',16)}</div><div class="feat-t">Save for later</div><div class="feat-d">Build your personal library of useful templates.</div></div>
     </div>
   </div></div>`;
 }
