@@ -904,7 +904,7 @@ async function renderPdfFull(container, url) {
     const pad = isMobile ? 8 : 24;
     container.innerHTML = `
       <div id="pdf_pages" style="width:100%;padding:${pad}px;display:flex;flex-direction:column;align-items:center;gap:${isMobile?12:20}px"></div>
-      <div style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:50;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);display:flex;align-items:center;gap:14px;padding:9px 14px;border-radius:30px;color:#fff;font-size:12.5px;box-shadow:0 4px 20px rgba(0,0,0,0.35)" id="pdf_navbar">
+      <div style="position:fixed;bottom:24px;z-index:50;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);display:flex;align-items:center;gap:14px;padding:9px 14px;border-radius:30px;color:#fff;font-size:12.5px;box-shadow:0 4px 20px rgba(0,0,0,0.35)" id="pdf_navbar">
         <button id="pdf_prev" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">‹</button>
         <span id="pdf_counter" style="min-width:84px;text-align:center;font-weight:500">Page ${current} of ${total}</span>
         <button id="pdf_next" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">›</button>
@@ -912,6 +912,17 @@ async function renderPdfFull(container, url) {
     `;
     const pagesBox = container.querySelector('#pdf_pages');
     const counter = container.querySelector('#pdf_counter');
+    const navbar = container.querySelector('#pdf_navbar');
+    // Center the floating nav pill on the viewer (not the whole window), since the
+    // info panel takes the right side on desktop.
+    const centerNav = () => {
+      if(!navbar || !document.body.contains(navbar)) { window.removeEventListener('resize', centerNav); return; }
+      const r = container.getBoundingClientRect();
+      navbar.style.left = (r.left + r.width / 2) + 'px';
+      navbar.style.transform = 'translateX(-50%)';
+    };
+    window.addEventListener('resize', centerNav);
+    requestAnimationFrame(centerNav);
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     // Target width = actual available width of the container (responsive),
