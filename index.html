@@ -302,9 +302,12 @@ input[type=file]{display:none}
   .nr .btn:not(.btna){display:none}            /* hide "Sign in", keep primary action */
   /* mobile search row */
   .msearch{display:block}
-  /* Excel viewer: full width, tighter fx bar, comfortable scrollable height */
-  .xls-fxbar{margin:14px 14px 0 !important;padding:9px 12px !important;gap:8px !important;border-radius:10px 10px 0 0 !important}
-  .xls-sheet{margin:0 14px !important;box-shadow:none !important;max-height:58vh !important;border-radius:0 0 10px 10px !important}
+  /* Excel viewer: full width, tighter fx bar, content-height (no flex-grow
+     stretching the sheet into a tall empty box), scrollable up to a cap. */
+  .xls-fxbar{margin:14px 14px 0 !important;padding:9px 12px !important;gap:8px !important;border-radius:10px 10px 0 0 !important;flex-shrink:0 !important}
+  .xls-sheet{margin:0 14px !important;box-shadow:none !important;max-height:56vh !important;border-radius:0 0 10px 10px !important;flex:none !important}
+  .xls-root{flex:none !important;height:auto !important}
+  #xls_table{height:auto !important}
   #xls_formula{font-size:12px !important}
   /* Off-canvas sidebar: slides in from the left */
   #SB_WRAP{position:fixed;top:54px;left:0;bottom:0;z-index:160;transform:translateX(-100%);transition:transform .22s ease;box-shadow:0 0 24px rgba(0,0,0,.12)}
@@ -357,11 +360,13 @@ input[type=file]{display:none}
   .dp-actions > button{width:46px;height:46px;padding:0 !important;border-radius:11px !important;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#fff !important;border:1px solid var(--bor) !important}
   .dp-actions > button svg{width:17px !important;height:17px !important}
 
-  /* author — a quiet row, hairline above */
-  .dp-author{order:6;margin:18px 0 0 !important;padding:16px 16px 0 !important;background:#fff !important;border:none !important;border-radius:0 !important;border-top:1px solid var(--bor) !important}
+  /* author — a quiet row, hairline above, consistent rhythm */
+  .dp-author{order:6;margin:20px 0 0 !important;padding:20px 16px 0 !important;background:#fff !important;border:none !important;border-radius:0 !important;border-top:1px solid var(--bor) !important}
+  .dp-author > div:first-child{width:38px !important;height:38px !important;font-size:13px !important}
 
-  /* footer — stats / tags / comments */
-  .dp-foot{order:7;background:#fff !important;padding:4px 16px 28px !important;margin-top:20px !important}
+  /* footer — stats / tags / comments, even spacing, single clean dividers */
+  .dp-foot{order:7;background:#fff !important;padding:20px 16px 28px !important;margin-top:0 !important;gap:20px !important}
+  .dp-foot > div:first-child{border-top:none !important;padding-top:0 !important}
 
   /* Cards (feed): bigger preview + tappable buttons */
   .cth{height:220px !important}
@@ -1321,13 +1326,14 @@ async function renderExcelViewer(container, url) {
         return colWidths[c] ? Math.max(minColW, colWidths[c]*(isMobileXls?4.2:7)) : baseColW;
       };
 
-      let html = `<table style="border-collapse:collapse;font-size:${cellFont}px;font-family:-apple-system,sans-serif;background:#fff">`;
+      let html = `<table style="border-collapse:collapse;font-size:${cellFont}px;font-family:-apple-system,sans-serif;background:#fff;width:100%">`;
       // Header row with column letters
       html += '<thead><tr><th style="background:#f1f0ec;border:1px solid #d8d5cd;min-width:34px;height:22px;position:sticky;top:0;left:0;z-index:3"></th>';
       for(let c = 0; c <= maxCol; c++) {
         const w = widthOf(c);
         html += `<th style="background:#f1f0ec;border:1px solid #d8d5cd;font-weight:600;color:#6b6758;font-size:11px;height:22px;min-width:${w}px;max-width:${w}px;position:sticky;top:0;z-index:2">${colLabel(c)}</th>`;
       }
+      html += '<th style="background:#f1f0ec;border:1px solid #d8d5cd;height:22px;width:auto;position:sticky;top:0;z-index:2"></th>';
       html += '</tr></thead><tbody>';
       for(let r = 0; r <= maxRow; r++) {
         html += `<tr><td style="background:#f1f0ec;border:1px solid #d8d5cd;font-weight:600;color:#6b6758;font-size:11px;text-align:center;min-width:34px;position:sticky;left:0;z-index:1">${r+1}</td>`;
@@ -1355,6 +1361,7 @@ async function renderExcelViewer(container, url) {
           const formulaDot = hasFormula ? '<span style="position:absolute;top:2px;right:2px;width:4px;height:4px;background:#107c41;border-radius:50%"></span>' : '';
           html += `<td${span}${dataAttr} class="xls-cell" style="position:relative;border:1px solid #e2e0d8;padding:3px ${isMobileXls?6:8}px;height:22px;color:#18170f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${w*2}px;text-align:${isNum?'right':'left'};cursor:cell;${bold?'font-weight:700;':''}">${String(val)}${formulaDot}</td>`;
         }
+        html += '<td style="border:1px solid #e2e0d8;width:auto"></td>';
         html += '</tr>';
       }
       html += '</tbody></table>';
