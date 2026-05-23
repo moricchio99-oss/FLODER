@@ -282,6 +282,11 @@ input[type=file]{display:none}
 #FAB_MENU svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round}
 #FAB_MENU:active{transform:scale(.94)}
 
+/* Mobile search row (hidden on desktop) */
+.msearch{display:none;padding:8px 12px;background:#fff;border-bottom:1px solid var(--bor);position:sticky;top:54px;z-index:90}
+.msearch input{width:100%;border:1px solid var(--bor);background:var(--sur2);border-radius:18px;padding:9px 16px;font-size:14px;font-family:inherit;color:var(--tx);outline:none;box-sizing:border-box}
+.msearch input:focus{border-color:var(--ac);background:#fff}
+
 /* ── MOBILE ── */
 @media (max-width:760px){
   .hamb{display:none}              /* use the floating button instead of the navbar one */
@@ -289,12 +294,18 @@ input[type=file]{display:none}
   body.sb-open #FAB_MENU{display:none}     /* hide FAB while menu is open */
   body.page-doc #FAB_MENU{display:none}    /* hide FAB on document pages (Back button is there) */
   .nav{padding:0 12px;gap:10px}
-  /* hide the search bar in the navbar on mobile (it pushes everything off-screen) */
+  /* search bar: hide the inline one, show it as a full-width row below the navbar */
   .sw{display:none}
   .logo-word{font-size:16px}
   .nr{gap:5px}
   .btn{padding:6px 10px;font-size:12px}
   .nr .btn:not(.btna){display:none}            /* hide "Sign in", keep primary action */
+  /* mobile search row */
+  .msearch{display:block}
+  /* Excel viewer: use full width on mobile, tighter fx bar */
+  .xls-fxbar{margin:10px 8px 0 !important;padding:9px 10px !important;gap:7px !important}
+  .xls-sheet{margin:0 8px !important;box-shadow:0 2px 14px rgba(0,0,0,0.3) !important;max-height:calc(100vh - 150px) !important}
+  #xls_formula{font-size:12px !important}
   /* Off-canvas sidebar: slides in from the left */
   #SB_WRAP{position:fixed;top:54px;left:0;bottom:0;z-index:160;transform:translateX(-100%);transition:transform .22s ease;box-shadow:0 0 24px rgba(0,0,0,.12)}
   body.sb-open #SB_WRAP{transform:translateX(0)}
@@ -319,6 +330,17 @@ input[type=file]{display:none}
   /* hide thumbnail strip in PPT viewer on mobile */
   .slides-thumbs{display:none !important}
   .slides-main{padding:14px !important}
+  /* Cards: bigger preview + more tappable buttons on full-width mobile cards */
+  .cth{height:220px !important}
+  .ctitle{font-size:15px !important;min-height:auto !important}
+  .can{font-size:13px !important}
+  .cm{font-size:12px !important}
+  .cfb{height:38px !important;font-size:12px !important}
+  .cfb svg{width:12px !important;height:12px !important}
+  /* Document info panel: roomier text on mobile */
+  .dp-info h1{font-size:22px !important}
+  /* tappable action buttons on the doc page */
+  .ma{padding:11px !important;font-size:13px !important}
 }
 </style>
 </head>
@@ -552,7 +574,7 @@ function buildNav() {
     ${S.page === 'doc' ? `<button class="btn" onclick="goBack()" style="display:flex;align-items:center;gap:5px;padding:7px 13px;font-size:12.5px;flex-shrink:0">${ic('back',13)} Back</button>` : ''}
     <div class="sw"><input class="sinp" placeholder="Search documents, authors, tags…" value="${S.search}" oninput="doSearch(this.value)" autocomplete="off"></div>
     <div class="nr">${right}</div>
-  </nav>`;
+  </nav>${S.page !== 'doc' ? `<div class="msearch"><input placeholder="Search documents, authors, tags…" value="${S.search}" oninput="doSearch(this.value)" autocomplete="off"></div>` : ''}`;
 }
 
 // ── SIDEBAR ──
@@ -1174,6 +1196,11 @@ async function renderExcelViewer(container, url) {
       return s;
     };
 
+    const isMobileXls = window.innerWidth <= 760;
+    const baseColW = isMobileXls ? 68 : 90;   // narrower columns on phones
+    const minColW = isMobileXls ? 42 : 48;
+    const cellFont = isMobileXls ? 12 : 12.5;
+
     const buildSheetTable = (idx) => {
       const ws = wb.Sheets[sheetNames[idx]];
       const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
@@ -1184,16 +1211,16 @@ async function renderExcelViewer(container, url) {
       const isMerged = (r, c) => merges.find(m => r>=m.s.r && r<=m.e.r && c>=m.s.c && c<=m.e.c);
       const isMergeHead = (r, c) => merges.find(m => r===m.s.r && c===m.s.c);
 
-      let html = '<table style="border-collapse:collapse;font-size:12.5px;font-family:-apple-system,sans-serif;background:#fff">';
+      let html = `<table style="border-collapse:collapse;font-size:${cellFont}px;font-family:-apple-system,sans-serif;background:#fff">`;
       // Header row with column letters
-      html += '<thead><tr><th style="background:#f1f0ec;border:1px solid #d8d5cd;min-width:38px;height:22px;position:sticky;top:0;left:0;z-index:3"></th>';
+      html += '<thead><tr><th style="background:#f1f0ec;border:1px solid #d8d5cd;min-width:34px;height:22px;position:sticky;top:0;left:0;z-index:3"></th>';
       for(let c = 0; c <= maxCol; c++) {
-        const w = colWidths[c] ? Math.max(48, colWidths[c]*7) : 90;
+        const w = colWidths[c] ? Math.max(minColW, colWidths[c]*(isMobileXls?5.5:7)) : baseColW;
         html += `<th style="background:#f1f0ec;border:1px solid #d8d5cd;font-weight:600;color:#6b6758;font-size:11px;height:22px;min-width:${w}px;max-width:${w}px;position:sticky;top:0;z-index:2">${colLabel(c)}</th>`;
       }
       html += '</tr></thead><tbody>';
       for(let r = 0; r <= maxRow; r++) {
-        html += `<tr><td style="background:#f1f0ec;border:1px solid #d8d5cd;font-weight:600;color:#6b6758;font-size:11px;text-align:center;min-width:38px;position:sticky;left:0;z-index:1">${r+1}</td>`;
+        html += `<tr><td style="background:#f1f0ec;border:1px solid #d8d5cd;font-weight:600;color:#6b6758;font-size:11px;text-align:center;min-width:34px;position:sticky;left:0;z-index:1">${r+1}</td>`;
         for(let c = 0; c <= maxCol; c++) {
           const merged = isMerged(r, c);
           if(merged && !isMergeHead(r, c)) continue; // skip cells covered by a merge
@@ -1211,12 +1238,12 @@ async function renderExcelViewer(container, url) {
           // Detect numeric for right-alignment
           const isNum = cell && cell.t === 'n';
           const bold = cell && cell.s && cell.s.font && cell.s.font.bold;
-          const w = colWidths[c] ? Math.max(48, colWidths[c]*7) : 90;
+          const w = colWidths[c] ? Math.max(minColW, colWidths[c]*(isMobileXls?5.5:7)) : baseColW;
           const hasFormula = cell && cell.f;
           const cellContent = hasFormula ? ('=' + cell.f) : (cell ? String(cell.v !== undefined ? cell.v : '') : '');
           const dataAttr = ` data-addr="${addr}" data-content="${String(cellContent).replace(/"/g,'&quot;')}"`;
           const formulaDot = hasFormula ? '<span style="position:absolute;top:2px;right:2px;width:4px;height:4px;background:#107c41;border-radius:50%"></span>' : '';
-          html += `<td${span}${dataAttr} class="xls-cell" style="position:relative;border:1px solid #e2e0d8;padding:3px 8px;height:22px;color:#18170f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${w*2}px;text-align:${isNum?'right':'left'};cursor:cell;${bold?'font-weight:700;':''}">${String(val)}${formulaDot}</td>`;
+          html += `<td${span}${dataAttr} class="xls-cell" style="position:relative;border:1px solid #e2e0d8;padding:3px ${isMobileXls?6:8}px;height:22px;color:#18170f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${w*2}px;text-align:${isNum?'right':'left'};cursor:cell;${bold?'font-weight:700;':''}">${String(val)}${formulaDot}</td>`;
         }
         html += '</tr>';
       }
@@ -1230,13 +1257,13 @@ async function renderExcelViewer(container, url) {
 
     container.innerHTML = `
       <div style="width:100%;flex:1;display:flex;flex-direction:column;min-height:calc(100vh - 54px)">
-        <div style="display:flex;align-items:center;gap:11px;margin:20px 20px 0;background:#fff;border-radius:12px 12px 0 0;padding:12px 16px;border-bottom:1px solid #eceae4">
+        <div class="xls-fxbar" style="display:flex;align-items:center;gap:11px;margin:20px 20px 0;background:#fff;border-radius:12px 12px 0 0;padding:12px 16px;border-bottom:1px solid #eceae4">
           <div id="xls_addr" style="background:#e8f3ef;color:#107c41;font-size:12px;font-weight:700;padding:5px 11px;border-radius:7px;min-width:46px;text-align:center;letter-spacing:0.3px;transition:all 0.12s">—</div>
           <div style="width:1px;height:18px;background:#eceae4;flex-shrink:0"></div>
           <span style="font-style:italic;color:#c2bdb2;font-size:14px;font-weight:600;font-family:Georgia,serif;flex-shrink:0">fx</span>
-          <span id="xls_formula" style="font-size:13px;color:#9a958a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;font-weight:450">Click a cell to inspect its value or formula</span>
+          <span id="xls_formula" style="font-size:13px;color:#9a958a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;font-weight:450">Click a cell to see its value</span>
         </div>
-        <div style="background:#fff;flex:1;margin:0 20px;border-radius:0 0 12px 12px;overflow:auto;box-shadow:0 8px 40px rgba(0,0,0,0.4);max-height:calc(100vh - 180px)">
+        <div class="xls-sheet" style="background:#fff;flex:1;margin:0 20px;border-radius:0 0 12px 12px;overflow:auto;box-shadow:0 8px 40px rgba(0,0,0,0.4);max-height:calc(100vh - 180px)">
           <div id="xls_table" style="overflow:auto;width:100%;height:100%">${buildSheetTable(activeSheet)}</div>
         </div>
         ${sheetNames.length > 1 ? `<div style="display:flex;gap:4px;padding:14px 20px 16px;flex-wrap:wrap" id="xls_tabs">${tabsHtml}</div>` : '<div style="height:16px"></div>'}
@@ -1577,10 +1604,17 @@ function goto(p){
 }
 function setTF(f){S.tf=f;if(!['home','trending','explore'].includes(S.page))S.page='home';closeSidebar();render();}
 function setSort(v){S.sort=v;render();}
+let _searchT;
 function doSearch(v){
   S.search=v;S.page='home';S.docId=null;
   if(window.location.pathname !== '/') history.pushState({}, '', '/');
-  render();
+  // Re-render only the content area (not the navbar) so the search input keeps focus.
+  // Debounced to avoid rebuilding on every keystroke.
+  clearTimeout(_searchT);
+  _searchT = setTimeout(async () => {
+    try { await buildApp(); } catch(e){ console.error(e); }
+    setTimeout(initLazyPreviews, 100);
+  }, 180);
 }
 function goUser(uid){
   if(S.user&&uid===S.user.id){goto('profile');return;}
