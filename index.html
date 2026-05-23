@@ -931,14 +931,14 @@ async function renderSlidesViewer(container, url) {
     container.innerHTML = `
       <div style="display:flex;width:100%;height:100%;min-height:calc(100vh - 54px)">
         <!-- Main slide area -->
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 24px;position:relative;min-width:0">
-          <canvas id="slide_main" style="max-width:100%;max-height:calc(100vh - 180px);box-shadow:0 10px 50px rgba(0,0,0,0.5);border-radius:4px;background:#fff"></canvas>
+        <div id="slide_area" style="flex:1;display:flex;align-items:center;justify-content:center;padding:28px;position:relative;min-width:0;min-height:calc(100vh - 54px)">
+          <canvas id="slide_main" style="box-shadow:0 10px 50px rgba(0,0,0,0.5);border-radius:4px;background:#fff;display:block"></canvas>
         </div>
         <!-- Thumbnail strip -->
-        <div id="slide_thumbs" style="width:148px;flex-shrink:0;background:rgba(0,0,0,0.25);overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 54px)"></div>
+        <div id="slide_thumbs" style="width:118px;flex-shrink:0;background:rgba(0,0,0,0.22);overflow-y:auto;padding:12px 9px;display:flex;flex-direction:column;gap:9px;max-height:calc(100vh - 54px)"></div>
       </div>
       <!-- Floating nav pill -->
-      <div style="position:fixed;bottom:24px;left:calc((100% - 160px) * 0.5);transform:translateX(-50%);z-index:50;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);display:flex;align-items:center;gap:14px;padding:9px 14px;border-radius:30px;color:#fff;font-size:12.5px;box-shadow:0 4px 20px rgba(0,0,0,0.35)">
+      <div style="position:fixed;bottom:24px;left:calc((100% - 130px) * 0.5);transform:translateX(-50%);z-index:50;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);display:flex;align-items:center;gap:14px;padding:9px 14px;border-radius:30px;color:#fff;font-size:12.5px;box-shadow:0 4px 20px rgba(0,0,0,0.35)">
         <button id="slide_prev" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">‹</button>
         <span id="slide_counter" style="min-width:90px;text-align:center;font-weight:500">Slide ${current} of ${total}</span>
         <button id="slide_next" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">›</button>
@@ -949,17 +949,26 @@ async function renderSlidesViewer(container, url) {
     const counter = container.querySelector('#slide_counter');
     const thumbsBox = container.querySelector('#slide_thumbs');
 
-    // Render the big main slide
+    // Render the big main slide — fit to available space, preserve aspect ratio
+    const slideArea = container.querySelector('#slide_area');
     const renderMain = async (n) => {
       const page = await pdf.getPage(n);
       const base = page.getViewport({ scale: 1 });
-      const targetWidth = 1100;
-      const scale = (targetWidth / base.width) * dpr;
+      const aspect = base.width / base.height;
+      // Available space in the main area (minus padding)
+      const availW = slideArea.clientWidth - 56;
+      const availH = slideArea.clientHeight - 56;
+      // Fit within both constraints
+      let dispW = availW;
+      let dispH = dispW / aspect;
+      if(dispH > availH) { dispH = availH; dispW = dispH * aspect; }
+      // Render at higher res for sharpness
+      const scale = (dispW / base.width) * dpr;
       const viewport = page.getViewport({ scale });
       mainCanvas.width = viewport.width;
       mainCanvas.height = viewport.height;
-      mainCanvas.style.width = (viewport.width / dpr) + 'px';
-      mainCanvas.style.height = (viewport.height / dpr) + 'px';
+      mainCanvas.style.width = dispW + 'px';
+      mainCanvas.style.height = dispH + 'px';
       await page.render({ canvasContext: mainCanvas.getContext('2d'), viewport }).promise;
       counter.textContent = `Slide ${n} of ${total}`;
     };
@@ -995,14 +1004,23 @@ async function renderSlidesViewer(container, url) {
     };
     document.addEventListener('keydown', keyHandler);
 
-    // Render the main slide first (fast feedback)
+    // Wait for layout to settle, then render the main slide at correct size
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     await renderMain(1);
+    // Re-render on window resize to keep it fitted
+    let resizeT;
+    const onResize = () => {
+      if(!document.body.contains(mainCanvas)) { window.removeEventListener('resize', onResize); return; }
+      clearTimeout(resizeT);
+      resizeT = setTimeout(() => renderMain(current), 150);
+    };
+    window.addEventListener('resize', onResize);
 
     // Then build thumbnails progressively
     for(let n = 1; n <= total; n++) {
       const wrap = document.createElement('div');
       wrap.dataset.thumb = n;
-      wrap.style.cssText = 'cursor:pointer;border-radius:5px;overflow:hidden;flex-shrink:0;outline:2px solid transparent;transition:opacity 0.15s,outline 0.15s;position:relative;background:#fff';
+      wrap.style.cssText = 'cursor:pointer;border-radius:4px;overflow:hidden;flex-shrink:0;outline:2px solid transparent;transition:opacity 0.15s,outline 0.15s;position:relative;background:#fff';
       wrap.style.opacity = n === 1 ? '1' : '0.62';
       if(n === 1) wrap.style.outline = '2px solid #0f7173';
       const tc = document.createElement('canvas');
@@ -1010,14 +1028,14 @@ async function renderSlidesViewer(container, url) {
       wrap.appendChild(tc);
       const label = document.createElement('div');
       label.textContent = n;
-      label.style.cssText = 'position:absolute;bottom:3px;right:4px;background:rgba(0,0,0,0.6);color:#fff;font-size:9px;padding:1px 5px;border-radius:4px';
+      label.style.cssText = 'position:absolute;bottom:3px;right:4px;background:rgba(0,0,0,0.55);color:#fff;font-size:8.5px;padding:1px 4px;border-radius:3px';
       wrap.appendChild(label);
       wrap.onclick = () => goTo(n);
       thumbsBox.appendChild(wrap);
 
       const page = await pdf.getPage(n);
       const base = page.getViewport({ scale: 1 });
-      const tScale = (124 / base.width) * dpr;
+      const tScale = (96 / base.width) * dpr;
       const tv = page.getViewport({ scale: tScale });
       tc.width = tv.width;
       tc.height = tv.height;
