@@ -341,9 +341,9 @@ input[type=file]{display:none}
   /* THE DOCUMENT — right under the title. Framed, rounded, tied to the page. */
   #DP_GRID > div:first-child{order:3;margin:0 16px !important;border-radius:16px !important;overflow:hidden !important;background:#1f1f1f !important;box-shadow:0 6px 26px rgba(0,0,0,0.16) !important;min-height:0 !important}
   #DP_VIEWER{min-height:0 !important;border-radius:16px !important;overflow:hidden}
-  #DP_VIEWER > div{min-height:0 !important;height:auto !important}
-  #DP_VIEWER > .xls-root{height:auto !important;min-height:0 !important}
-  .slides-main{padding:30px 16px !important;min-height:0 !important;height:auto !important;flex-direction:column !important;gap:18px !important}
+  #DP_VIEWER div{min-height:0 !important}
+  #DP_VIEWER > div{height:auto !important}
+  .slides-main{padding:30px 16px !important;height:auto !important;flex-direction:column !important;gap:18px !important;display:flex !important}
   #slide_navpill{position:static !important;transform:none !important;bottom:auto !important;align-self:center}
   .slides-thumbs{display:none !important}
   #DP_VIEWER iframe{min-height:70vh !important}
@@ -1100,13 +1100,15 @@ async function renderSlidesViewer(container, url) {
     const total = pdf.numPages;
     let current = 1;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const isMob = window.innerWidth <= 760;
+    const rowMinH = isMob ? '' : 'min-height:calc(100vh - 54px)';
 
     container.innerHTML = `
-      <div style="display:flex;width:100%;height:100%;min-height:calc(100vh - 54px)">
+      <div style="display:flex;width:100%;${isMob?'':'height:100%;'}${rowMinH}">
         <!-- Thumbnail strip (left) -->
         <div id="slide_thumbs" class="slides-thumbs" style="width:118px;flex-shrink:0;background:rgba(0,0,0,0.22);overflow-y:auto;padding:12px 9px;display:flex;flex-direction:column;gap:9px;max-height:calc(100vh - 54px)"></div>
         <!-- Main slide area -->
-        <div id="slide_area" class="slides-main" style="flex:1;display:flex;align-items:center;justify-content:center;padding:28px;position:relative;min-width:0;min-height:calc(100vh - 54px)">
+        <div id="slide_area" class="slides-main" style="flex:1;display:flex;align-items:center;justify-content:center;padding:28px;position:relative;min-width:0;${rowMinH}">
           <canvas id="slide_main" style="box-shadow:0 10px 50px rgba(0,0,0,0.5);border-radius:4px;background:#fff;display:block"></canvas>
           <!-- Floating nav pill (centered on the slide area) -->
           <div id="slide_navpill" style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:50;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);display:flex;align-items:center;gap:14px;padding:9px 14px;border-radius:30px;color:#fff;font-size:12.5px;box-shadow:0 4px 20px rgba(0,0,0,0.35)">
