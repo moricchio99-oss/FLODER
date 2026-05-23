@@ -316,6 +316,7 @@ function parseUrl() {
 
 window.addEventListener('popstate', () => {
   parseUrl();
+  window.scrollTo(0, 0);
   render();
 });
 
@@ -552,7 +553,16 @@ async function render() {
   } catch(e) { console.error('[FileSilver] buildNav error:', e); }
   try {
     await buildApp();
-  } catch(e) { console.error('[FileSilver] buildApp error:', e); }
+  } catch(e) {
+    console.error('[FileSilver] buildApp error:', e);
+    // Recovery: if rendering broke, force a clean home view so the page never stays blank
+    try {
+      if(S.page !== 'home') {
+        S.page = 'home'; S.docId = null;
+        await buildApp();
+      }
+    } catch(e2) { console.error('[FileSilver] recovery failed:', e2); }
+  }
   setTimeout(initLazyPreviews, 100);
 }
 
@@ -847,6 +857,11 @@ async function renderPdfFull(container, url) {
 
     // Track current page on window scroll
     const onScroll = () => {
+      // Auto-detach if this PDF viewer is no longer in the DOM
+      if(!document.body.contains(pagesBox)) {
+        window.removeEventListener('scroll', onScroll);
+        return;
+      }
       const canvases = pagesBox.querySelectorAll('canvas');
       let visiblePage = 1;
       canvases.forEach(c => {
@@ -882,7 +897,8 @@ async function renderOfficeAsPdf(container, fileUrl, fileName, ftype, thumbUrl) 
     <div style="width:30px;height:30px;border:3px solid rgba(255,255,255,0.2);border-top-color:rgba(255,255,255,0.7);border-radius:50%;animation:spin 0.8s linear infinite"></div>
     <div style="text-align:center;line-height:1.6">Preparing preview…<br><span style="font-size:11px;color:rgba(255,255,255,0.4)">First view may take a few seconds</span></div>
   </div>`;
-  try {
+
+  const callConvert = async () => {
     const resp = await fetch(`${SUPABASE_URL}/functions/v1/convert-to-pdf`, {
       method: 'POST',
       headers: {
@@ -891,16 +907,26 @@ async function renderOfficeAsPdf(container, fileUrl, fileName, ftype, thumbUrl) 
       },
       body: JSON.stringify({ fileUrl, fileName }),
     });
-    const data = await resp.json();
+    return resp.json();
+  };
+
+  const showPdf = (pdfUrl) => {
+    if(ftype === 'ppt') renderSlidesViewer(container, pdfUrl);
+    else renderPdfFull(container, pdfUrl);
+  };
+
+  try {
+    let data = await callConvert();
+    // Retry once if the first attempt didn't return a URL (conversion may still be finishing)
+    if(!data.pdfUrl) {
+      console.warn('[FileSilver] First convert attempt no URL, retrying in 4s…', data.error || data);
+      await new Promise(r => setTimeout(r, 4000));
+      data = await callConvert();
+    }
     if(data.pdfUrl) {
-      if(ftype === 'ppt') {
-        renderSlidesViewer(container, data.pdfUrl);
-      } else {
-        renderPdfFull(container, data.pdfUrl);
-      }
+      showPdf(data.pdfUrl);
     } else {
-      console.warn('[FileSilver] Office→PDF conversion failed:', data.error || data);
-      // Fallback to Microsoft Office Viewer
+      console.warn('[FileSilver] Office→PDF conversion failed after retry:', data.error || data);
       renderOfficeViewer(container, fileUrl, ftype, thumbUrl);
     }
   } catch(err) {
@@ -1215,6 +1241,7 @@ function goHome() {
   history.pushState({}, '', '/');
   S.page = 'home';
   S.docId = null;
+  window.scrollTo(0, 0);
   render();
 }
 
