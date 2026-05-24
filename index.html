@@ -869,9 +869,9 @@ async function buildDocPage(id) {
       
       <div class="dp-actions" style="display:flex;gap:8px">
         <a href="${doc.file_url}" target="_blank" onclick="incViews('${id}')" style="flex:1;background:var(--ac);color:white;border:none;padding:11px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;text-decoration:none">${ic('download',14)} Download .${extOf(doc.file_type)}</a>
-        <button onclick="doSaveDoc('${id}',${saved})" id="dp_save_btn" style="background:#fff;color:var(--tx);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer;${saved?'background:var(--acb);color:var(--ac);border-color:var(--ac)':''}" aria-label="save">${ic(saved?'bookmark':'savi',14)}</button>
-        <button onclick="doLike('${id}',${liked})" id="dp_like_btn" style="background:#fff;color:var(--tx);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer;${liked?'background:#fff0f0;color:#d12b2b;border-color:#d12b2b':''}" aria-label="like">${ic('heart',14)}</button>
-        <button onclick="shareDoc()" style="background:#fff;color:var(--tx);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer" aria-label="share">${ic('open',14)}</button>
+        <button onclick="doSaveDoc('${id}',${saved})" id="dp_save_btn" style="background:#fff;color:var(--ac);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;${saved?'background:var(--acb);color:var(--ac);border-color:var(--ac)':''}" aria-label="save">${ic(saved?'bookmark':'savi',14)}</button>
+        <button onclick="doLike('${id}',${liked})" id="dp_like_btn" style="background:#fff;color:var(--ac);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;${liked?'background:#fff0f0;color:#d12b2b;border-color:#d12b2b':''}" aria-label="like">${ic('heart',14)}</button>
+        <button onclick="shareDoc()" style="background:#fff;color:var(--ac);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center" aria-label="share">${ic('open',14)}</button>
       </div>
       
       <div class="dp-author" onclick="goUser('${doc.user_id}')" style="display:flex;align-items:center;gap:11px;padding:11px;background:var(--sur2);border-radius:9px;cursor:pointer">
@@ -972,10 +972,12 @@ async function renderPdfFull(container, url) {
         <div style="padding:12px 12px 0;display:flex;flex-direction:column;align-items:center;width:100%">
           <canvas id="pdf_canvas" style="width:100%;max-width:100%;border-radius:4px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.14);display:block"></canvas>
         </div>
-        <div id="pdf_navbar" style="align-self:center;margin:12px auto 12px;background:#fff;border:1px solid #e0ddd5;display:flex;align-items:center;gap:9px;padding:5px 11px;border-radius:20px;color:#3a3733;font-size:12px;font-weight:500;box-shadow:0 3px 14px rgba(0,0,0,0.12)">
-          <button id="pdf_prev" style="background:#f0eee9;border:none;color:#3a3733;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:600;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0">‹</button>
-          <span id="pdf_counter" style="min-width:84px;text-align:center;font-weight:500">Page ${current} of ${total}</span>
-          <button id="pdf_next" style="background:#f0eee9;border:none;color:#3a3733;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:600;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0">›</button>
+        <div style="display:flex;justify-content:center;width:100%;margin:12px 0">
+          <div id="pdf_navbar" style="background:#fff;border:1px solid #e0ddd5;display:inline-flex;align-items:center;gap:9px;padding:5px 11px;border-radius:20px;color:#3a3733;font-size:12px;font-weight:500;box-shadow:0 3px 14px rgba(0,0,0,0.12);width:fit-content">
+            <button id="pdf_prev" style="background:#f0eee9;border:none;color:#3a3733;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:600;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0">‹</button>
+            <span id="pdf_counter" style="min-width:84px;text-align:center;font-weight:500">Page ${current} of ${total}</span>
+            <button id="pdf_next" style="background:#f0eee9;border:none;color:#3a3733;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:600;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0">›</button>
+          </div>
         </div>`;
       const canvas = container.querySelector('#pdf_canvas');
       const counter = container.querySelector('#pdf_counter');
@@ -1242,7 +1244,7 @@ async function renderSlidesViewer(container, url) {
       wrap.appendChild(tc);
       const label = document.createElement('div');
       label.textContent = n;
-      label.style.cssText = 'position:absolute;bottom:3px;right:4px;background:rgba(0,0,0,0.55);color:#fff;font-size:8.5px;padding:1px 4px;border-radius:3px';
+      label.style.cssText = 'position:absolute;bottom:3px;right:4px;background:#0f7173;color:#fff;font-size:8.5px;font-weight:600;padding:1px 5px;border-radius:5px';
       wrap.appendChild(label);
       wrap.onclick = () => goTo(n);
       thumbsBox.appendChild(wrap);
