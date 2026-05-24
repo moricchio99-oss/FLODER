@@ -107,10 +107,11 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 .sort-seg label:hover{color:var(--tx2)}
 .sort-seg input[type=radio]:checked + label{background:#fff;color:var(--tx);font-weight:600;box-shadow:var(--sh)}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-.card{background:#fff;border:none;border-radius:0;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:.15s}
+.card{background:#fff;border:1px solid var(--bor);border-radius:12px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:.15s;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.09);transform:translateY(-2px)}
 .card:hover .cth{opacity:.9}
 .card:hover .ctitle{color:var(--ac)}
-.cth{height:190px;position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;border-radius:10px;background:#e8e8e8}
+.cth{height:190px;position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;border-radius:0;background:#e8e8e8}
 .cth-word{background:#dce8f7}.cth-excel{background:#d8f0e4}.cth-ppt{background:#fde8e0}.cth-pdf{background:#fde0e0}
 .cbdg{position:absolute;top:8px;left:8px;font-size:9px;font-weight:700;letter-spacing:.4px;padding:3px 7px;border-radius:5px;color:#fff;text-transform:uppercase;z-index:2}
 .bdg-word{background:var(--wc)}.bdg-excel{background:var(--ec)}.bdg-ppt{background:var(--pc)}.bdg-pdf{background:var(--dc)}
@@ -353,12 +354,12 @@ input[type=file]{display:none}
 
   /* The dark viewer: now a normal child of .dp-info → already inset 16px
      each side by the panel padding. Centered, framed, full usable width. */
-  #DP_VIEWER{min-height:0 !important;width:100% !important;align-items:stretch !important;border-radius:16px !important;overflow:hidden !important;background:#f0eee9 !important;border:1px solid #e5e2db !important;box-shadow:none !important;display:flex !important;flex-direction:column !important;margin:0 !important}
+  #DP_VIEWER{min-height:0 !important;width:calc(100% + 16px) !important;margin-left:-8px !important;margin-right:-8px !important;align-items:stretch !important;border-radius:14px !important;overflow:hidden !important;background:#f0eee9 !important;border:1px solid #e5e2db !important;box-shadow:none !important;display:flex !important;flex-direction:column !important}
   #DP_VIEWER div{min-height:0 !important}
   #DP_VIEWER > div{height:auto !important;width:100% !important}
 
   /* PPT slide area: centered, full width, breathing room */
-  .slides-main{padding:10px 10px 12px !important;height:auto !important;flex-direction:column !important;gap:12px !important;display:flex !important;align-items:center !important;justify-content:center !important;width:100% !important}
+  .slides-main{padding:6px 6px 10px !important;height:auto !important;flex-direction:column !important;gap:10px !important;display:flex !important;align-items:center !important;justify-content:center !important;width:100% !important}
   #slide_navpill{position:static !important;transform:none !important;bottom:auto !important;align-self:center}
   .slides-thumbs{display:none !important}
   #DP_VIEWER iframe{min-height:70vh !important}
