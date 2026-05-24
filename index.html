@@ -72,6 +72,8 @@
 }
 body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px}
 .nav{background:#fff;border-bottom:1px solid var(--bor);height:54px;display:flex;align-items:center;padding:0 18px;gap:14px;position:sticky;top:0;z-index:100;box-shadow:var(--sh)}
+.nav-back-arrow{display:none;width:34px;height:34px;border:1px solid var(--bor);border-radius:50%;background:#fff;align-items:center;justify-content:center;color:var(--tx2);cursor:pointer;flex-shrink:0;padding:0}
+.nav-back-arrow:hover{background:var(--sur2)}
 .logo{display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0}
 .logo-word{font-size:15px;font-weight:800;letter-spacing:-.4px;color:var(--tx)}
 .logo-word span{color:var(--ac)}
@@ -342,20 +344,21 @@ input[type=file]{display:none}
   /* Title block */
   .dp-head{display:flex !important;flex-direction:column !important;align-items:flex-start !important}
   .dp-head > span{display:inline-block;width:fit-content}
-  /* Back lives as a round arrow next to the type chip on doc pages → hide the
-     navbar Back button on mobile to avoid duplication. */
+  /* Back is a round arrow at the left of the navbar on mobile. Hide the old
+     text Back button; the body of the page now starts straight with the title. */
   .nav-back{display:none !important}
+  .nav-back-arrow{display:flex !important}
   .dp-info h1{font-size:23px !important;line-height:1.22 !important;margin:11px 0 8px !important;letter-spacing:-0.3px}
   .dp-desc{margin:0 0 18px !important;font-size:13.5px !important;line-height:1.55 !important}
 
   /* The dark viewer: now a normal child of .dp-info → already inset 16px
      each side by the panel padding. Centered, framed, full usable width. */
-  #DP_VIEWER{min-height:0 !important;width:100% !important;align-items:stretch !important;border-radius:16px !important;overflow:hidden !important;background:#1f1f1f !important;box-shadow:0 6px 26px rgba(0,0,0,0.16) !important;display:flex !important;flex-direction:column !important;margin:0 !important}
+  #DP_VIEWER{min-height:0 !important;width:100% !important;align-items:stretch !important;border-radius:16px !important;overflow:hidden !important;background:#f0eee9 !important;border:1px solid #e5e2db !important;box-shadow:none !important;display:flex !important;flex-direction:column !important;margin:0 !important}
   #DP_VIEWER div{min-height:0 !important}
   #DP_VIEWER > div{height:auto !important;width:100% !important}
 
   /* PPT slide area: centered, full width, breathing room */
-  .slides-main{padding:14px 12px !important;height:auto !important;flex-direction:column !important;gap:14px !important;display:flex !important;align-items:center !important;justify-content:center !important;width:100% !important}
+  .slides-main{padding:10px 10px 12px !important;height:auto !important;flex-direction:column !important;gap:12px !important;display:flex !important;align-items:center !important;justify-content:center !important;width:100% !important}
   #slide_navpill{position:static !important;transform:none !important;bottom:auto !important;align-self:center}
   .slides-thumbs{display:none !important}
   #DP_VIEWER iframe{min-height:70vh !important}
@@ -611,6 +614,7 @@ function buildNav() {
     : `<button class="btn" onclick="openAuth()">Sign in</button>
        <button class="btn btna" onclick="openAuth()">Get started</button>`;
   document.getElementById('NV').innerHTML = `<nav class="nav">
+    ${S.page === 'doc' ? `<button class="nav-back-arrow" onclick="goBack()" aria-label="Back"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>` : ''}
     <div class="logo" onclick="goto('home')">${LOGO_MARK}<span class="logo-word"><span style="color:#b0b8cc">File</span><span style="color:#0f7173">Silver</span></span></div>
     ${S.page === 'doc' ? `<button class="btn nav-back" onclick="goBack()" style="display:flex;align-items:center;gap:5px;padding:7px 13px;font-size:12.5px;flex-shrink:0">${ic('back',13)} Back</button>` : ''}
     <div class="sw"><input class="sinp" placeholder="Search documents, authors, tags…" value="${S.search}" oninput="doSearch(this.value)" autocomplete="off"></div>
@@ -931,22 +935,6 @@ async function buildDocPage(id) {
       info.insertBefore(viewer, head.nextSibling);
       if(outerWrap) outerWrap.style.display = 'none';
     }
-    // Back as a small round arrow on the same row as the type chip (option B).
-    const typeChip = head ? head.querySelector('span') : null;
-    if(head && typeChip && !head.querySelector('.dp-back')) {
-      const row = document.createElement('div');
-      row.className = 'dp-backrow';
-      row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:11px';
-      const back = document.createElement('button');
-      back.className = 'dp-back';
-      back.setAttribute('aria-label','Back');
-      back.onclick = () => goBack();
-      back.style.cssText = 'width:34px;height:34px;border:1px solid var(--bor);border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;color:var(--tx2)';
-      back.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>';
-      head.insertBefore(row, typeChip);
-      row.appendChild(back);
-      row.appendChild(typeChip);   // move chip next to the arrow
-    }
   }
   if(viewer) {
     const isSupabase = doc.file_url && doc.file_url.indexOf('supabase.co/storage') !== -1;
@@ -964,11 +952,11 @@ async function buildDocPage(id) {
   }
 }
 
-// ── FULL PDF VIEWER (multipage, PDF.js) ──
+// ── FULL PDF VIEWER — single-page on mobile (like PPT), scroll on desktop ──
 async function renderPdfFull(container, url) {
-  container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.5);font-size:13px">Loading document…</div>`;
+  container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:200px;color:#9a958a;font-size:13px">Loading document…</div>`;
   if(typeof pdfjsLib === 'undefined') {
-    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.5);font-size:13px">Preview unavailable</div>`;
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:200px;color:#9a958a;font-size:13px">Preview unavailable</div>`;
     return;
   }
   try {
@@ -976,46 +964,72 @@ async function renderPdfFull(container, url) {
     const total = pdf.numPages;
     let current = 1;
     const isMobile = window.innerWidth <= 760;
-    const pad = isMobile ? 14 : 24;
-    // Pill is inline (static) on mobile — sits centered at the bottom of the
-    // viewer like the PPT pill — and floating-fixed only on desktop.
-    const pillPos = isMobile
-      ? 'position:static;align-self:center;margin:0 auto 14px'
-      : 'position:fixed;bottom:24px;z-index:50';
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+    if(isMobile) {
+      // ---- MOBILE: one page at a time, paged with ‹ ›, compact pill ----
+      container.innerHTML = `
+        <div style="padding:12px 12px 0;display:flex;flex-direction:column;align-items:center;width:100%">
+          <canvas id="pdf_canvas" style="width:100%;max-width:100%;border-radius:4px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.14);display:block"></canvas>
+        </div>
+        <div id="pdf_navbar" style="align-self:center;margin:12px auto 12px;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);display:flex;align-items:center;gap:12px;padding:8px 14px;border-radius:30px;color:#fff;font-size:12.5px;box-shadow:0 4px 16px rgba(0,0,0,0.22)">
+          <button id="pdf_prev" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">‹</button>
+          <span id="pdf_counter" style="min-width:84px;text-align:center;font-weight:500">Page ${current} of ${total}</span>
+          <button id="pdf_next" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">›</button>
+        </div>`;
+      const canvas = container.querySelector('#pdf_canvas');
+      const counter = container.querySelector('#pdf_counter');
+      const prevBtn = container.querySelector('#pdf_prev');
+      const nextBtn = container.querySelector('#pdf_next');
+
+      const renderPage = async (n) => {
+        current = Math.max(1, Math.min(total, n));
+        const page = await pdf.getPage(current);
+        const wrapW = (canvas.parentElement.clientWidth || (window.innerWidth - 56));
+        const base = page.getViewport({ scale: 1 });
+        const scale = (wrapW / base.width) * dpr;
+        const vp = page.getViewport({ scale });
+        canvas.width = vp.width;
+        canvas.height = vp.height;
+        canvas.style.height = (vp.height / dpr) + 'px';
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+        counter.textContent = `Page ${current} of ${total}`;
+        prevBtn.style.opacity = current === 1 ? '0.35' : '1';
+        nextBtn.style.opacity = current === total ? '0.35' : '1';
+      };
+      prevBtn.onclick = () => { if(current > 1) renderPage(current - 1); };
+      nextBtn.onclick = () => { if(current < total) renderPage(current + 1); };
+      await renderPage(1);
+      return;
+    }
+
+    // ---- DESKTOP: all pages stacked, natural scroll (unchanged) ----
+    const pad = 24;
     container.innerHTML = `
-      <div id="pdf_pages" style="width:100%;padding:${pad}px ${pad}px ${isMobile?'4px':pad+'px'};display:flex;flex-direction:column;align-items:center;gap:${isMobile?12:20}px"></div>
-      <div style="${pillPos};background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);display:flex;align-items:center;gap:12px;padding:8px 14px;border-radius:30px;color:#fff;font-size:12.5px;box-shadow:0 4px 20px rgba(0,0,0,0.35)" id="pdf_navbar">
+      <div id="pdf_pages" style="width:100%;padding:${pad}px;display:flex;flex-direction:column;align-items:center;gap:20px"></div>
+      <div style="position:fixed;bottom:24px;z-index:50;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);display:flex;align-items:center;gap:12px;padding:8px 14px;border-radius:30px;color:#fff;font-size:12.5px;box-shadow:0 4px 20px rgba(0,0,0,0.35)" id="pdf_navbar">
         <button id="pdf_prev" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">‹</button>
         <span id="pdf_counter" style="min-width:84px;text-align:center;font-weight:500">Page ${current} of ${total}</span>
         <button id="pdf_next" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">›</button>
-      </div>
-    `;
+      </div>`;
     const pagesBox = container.querySelector('#pdf_pages');
     const counter = container.querySelector('#pdf_counter');
     const navbar = container.querySelector('#pdf_navbar');
-    // Center the floating nav pill on the viewer (desktop only — on mobile the
-    // pill is static/inline so it needs no positioning logic).
     const centerNav = () => {
       if(!navbar || !document.body.contains(navbar)) { window.removeEventListener('resize', centerNav); return; }
-      if(window.innerWidth <= 760) return;   // static on mobile, nothing to do
       navbar.style.position = 'fixed';
       navbar.style.bottom = '24px';
-      navbar.style.marginTop = '0';
       const r = container.getBoundingClientRect();
       navbar.style.left = (r.left + r.width / 2) + 'px';
       navbar.style.transform = 'translateX(-50%)';
     };
     window.addEventListener('resize', centerNav);
     requestAnimationFrame(centerNav);
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    // Target width = actual available width of the container (responsive),
-    // capped at 820 on desktop so it doesn't get huge on wide screens.
     let availWidth = pagesBox.clientWidth - pad * 2;
-    if(availWidth < 200) availWidth = Math.min(window.innerWidth, 820) - pad * 2; // fallback if layout not settled
+    if(availWidth < 200) availWidth = Math.min(window.innerWidth, 820) - pad * 2;
     const targetWidth = Math.min(availWidth, 820);
 
-    // Render ALL pages stacked vertically (natural scroll)
     for(let n = 1; n <= total; n++) {
       const page = await pdf.getPage(n);
       const baseViewport = page.getViewport({ scale: 1 });
@@ -1027,47 +1041,34 @@ async function renderPdfFull(container, url) {
       canvas.style.width = (viewport.width / dpr) + 'px';
       canvas.style.height = (viewport.height / dpr) + 'px';
       canvas.style.maxWidth = '100%';
-      canvas.style.boxShadow = isMobile ? '0 2px 14px rgba(0,0,0,0.3)' : '0 8px 40px rgba(0,0,0,0.4)';
+      canvas.style.boxShadow = '0 8px 40px rgba(0,0,0,0.4)';
       canvas.style.borderRadius = '3px';
       canvas.style.background = '#fff';
       canvas.dataset.page = n;
       pagesBox.appendChild(canvas);
       await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
     }
-
-    // Track current page on window scroll
     const onScroll = () => {
-      // Auto-detach if this PDF viewer is no longer in the DOM
-      if(!document.body.contains(pagesBox)) {
-        window.removeEventListener('scroll', onScroll);
-        return;
-      }
+      if(!document.body.contains(pagesBox)) { window.removeEventListener('scroll', onScroll); return; }
       const canvases = pagesBox.querySelectorAll('canvas');
       let visiblePage = 1;
-      canvases.forEach(c => {
-        const rect = c.getBoundingClientRect();
-        if(rect.top <= 200) visiblePage = parseInt(c.dataset.page);
-      });
+      canvases.forEach(c => { if(c.getBoundingClientRect().top <= 200) visiblePage = parseInt(c.dataset.page); });
       current = visiblePage;
       counter.textContent = `Page ${current} of ${total}`;
     };
     window.addEventListener('scroll', onScroll);
-
     const goToPage = (n) => {
       n = Math.max(1, Math.min(total, n));
       current = n;
       const target = pagesBox.querySelector(`canvas[data-page="${n}"]`);
-      if(target) {
-        const y = target.getBoundingClientRect().top + window.scrollY - 110;
-        window.scrollTo({ top: y, behavior: 'smooth' });
-      }
+      if(target) { const y = target.getBoundingClientRect().top + window.scrollY - 110; window.scrollTo({ top: y, behavior: 'smooth' }); }
       counter.textContent = `Page ${current} of ${total}`;
     };
     container.querySelector('#pdf_prev').onclick = () => goToPage(current - 1);
     container.querySelector('#pdf_next').onclick = () => goToPage(current + 1);
   } catch(err) {
     console.warn('[FileSilver] PDF full render failed:', err.message || err);
-    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:rgba(255,255,255,0.5);font-size:13px;text-align:center;padding:40px">Could not load preview.<br>Try downloading the file instead.</div>`;
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:200px;color:#9a958a;font-size:13px;text-align:center;padding:40px">Could not load preview.<br>Try downloading the file instead.</div>`;
   }
 }
 
