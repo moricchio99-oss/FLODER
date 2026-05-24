@@ -416,6 +416,7 @@ const S = {
   tags: [],
   uploadType: 'word',
   docId: null,
+  pendingDownload: null,
 };
 const PG = {};
 const PAGE_SIZE = 18;
@@ -453,6 +454,10 @@ async function init() {
       S.profile = null;
     }
     render();
+    // If the user was trying to download before signing in, resume it now.
+    if (session && S.pendingDownload) {
+      setTimeout(resumePendingDownload, 300);
+    }
   });
   render();
 }
@@ -555,7 +560,7 @@ function card(doc, animated=false) {
       <div class="cf">
         <button class="cfb${saved?' sv':''}" onclick="doSave(event,'${doc.id}')">${ic('savi',9)} ${saved?'Saved':'Save'}</button>
         ${S.user && S.user.id === doc.user_id ? `<button class="cfb" style="color:#dc2626;border-color:#dc2626" onclick="deleteDoc(event,'${doc.id}')">${ic('close',9)} Delete</button>` : ''}
-        <a class="cfb cfd" href="${doc.file_url}" target="_blank" onclick="event.stopPropagation();incViews('${doc.id}')" style="text-decoration:none">${ic('download',9)} Download</a>
+        <a class="cfb cfd" href="${doc.file_url}" target="_blank" rel="noopener" onclick="event.stopPropagation();return requestDownload(event,'${doc.id}','${doc.file_url}')" style="text-decoration:none">${ic('download',9)} Download</a>
       </div>
     </div>
   </div>`;
@@ -869,7 +874,7 @@ async function buildDocPage(id) {
       </div>
       
       <div class="dp-actions" style="display:flex;gap:8px">
-        <a href="${doc.file_url}" target="_blank" onclick="incViews('${id}')" style="flex:1;background:var(--ac);color:white;border:none;padding:11px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;text-decoration:none">${ic('download',14)} Download .${extOf(doc.file_type)}</a>
+        <a href="${doc.file_url}" target="_blank" rel="noopener" onclick="return requestDownload(event,'${id}','${doc.file_url}')" style="flex:1;background:var(--ac);color:white;border:none;padding:11px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;text-decoration:none">${ic('download',14)} Download .${extOf(doc.file_type)}</a>
         <button onclick="doSaveDoc('${id}',${saved})" id="dp_save_btn" style="background:#fff;color:var(--ac);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;${saved?'background:var(--acb);color:var(--ac);border-color:var(--ac)':''}" aria-label="save">${ic(saved?'bookmark':'savi',14)}</button>
         <button onclick="doLike('${id}',${liked})" id="dp_like_btn" style="background:#fff;color:var(--ac);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;${liked?'background:#fff0f0;color:#d12b2b;border-color:#d12b2b':''}" aria-label="like">${ic('heart',14)}</button>
         <button onclick="shareDoc()" style="background:#fff;color:var(--ac);border:1px solid var(--bor);padding:10px 13px;border-radius:9px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center" aria-label="share">${ic('open',14)}</button>
@@ -1501,6 +1506,31 @@ function shareDoc() {
 }
 
 // ── ACTIONS ──
+// Download gate: preview is free for everyone, but downloading the file
+// requires an account. If signed out, we remember what was requested and
+// kick off the download automatically right after sign-in.
+function requestDownload(ev, docId, fileUrl) {
+  if(!S.user) {
+    if(ev) ev.preventDefault();
+    S.pendingDownload = { docId, fileUrl };
+    toast('Create a free account to download.', true);
+    openAuth();
+    return false;   // block the link
+  }
+  incViews(docId);
+  return true;       // signed in → let the <a> proceed
+}
+
+// Called after a successful sign-in/sign-up to resume a pending download.
+function resumePendingDownload() {
+  if(S.user && S.pendingDownload) {
+    const { docId, fileUrl } = S.pendingDownload;
+    S.pendingDownload = null;
+    incViews(docId);
+    window.open(fileUrl, '_blank', 'noopener');
+  }
+}
+
 async function doLike(docId, isLiked) {
   if(!S.user){toast('Sign in to like.',false);return;}
   if(isLiked) {
