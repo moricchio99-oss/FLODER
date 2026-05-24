@@ -854,7 +854,7 @@ async function buildDocPage(id) {
   container.innerHTML = `
   <div style="display:grid;grid-template-columns:2.4fr 1fr;align-items:start" id="DP_GRID">
     
-    <div style="background:#2a2a2a;padding:0;display:flex;flex-direction:column;${vwMinH}">
+    <div style="background:#f0eee9;padding:0;display:flex;flex-direction:column;${vwMinH}">
       <div id="DP_VIEWER" style="flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;${vwMinH}">
       </div>
     </div>
@@ -972,10 +972,10 @@ async function renderPdfFull(container, url) {
         <div style="padding:12px 12px 0;display:flex;flex-direction:column;align-items:center;width:100%">
           <canvas id="pdf_canvas" style="width:100%;max-width:100%;border-radius:4px;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,0.14);display:block"></canvas>
         </div>
-        <div id="pdf_navbar" style="align-self:center;margin:12px auto 12px;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);display:flex;align-items:center;gap:12px;padding:8px 14px;border-radius:30px;color:#fff;font-size:12.5px;box-shadow:0 4px 16px rgba(0,0,0,0.22)">
-          <button id="pdf_prev" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">‹</button>
+        <div id="pdf_navbar" style="align-self:center;margin:12px auto 12px;background:#fff;border:1px solid #e0ddd5;display:flex;align-items:center;gap:9px;padding:5px 11px;border-radius:20px;color:#3a3733;font-size:12px;font-weight:500;box-shadow:0 3px 14px rgba(0,0,0,0.12)">
+          <button id="pdf_prev" style="background:#f0eee9;border:none;color:#3a3733;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:600;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0">‹</button>
           <span id="pdf_counter" style="min-width:84px;text-align:center;font-weight:500">Page ${current} of ${total}</span>
-          <button id="pdf_next" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">›</button>
+          <button id="pdf_next" style="background:#f0eee9;border:none;color:#3a3733;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:600;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0">›</button>
         </div>`;
       const canvas = container.querySelector('#pdf_canvas');
       const counter = container.querySelector('#pdf_counter');
@@ -1007,10 +1007,10 @@ async function renderPdfFull(container, url) {
     const pad = 24;
     container.innerHTML = `
       <div id="pdf_pages" style="width:100%;padding:${pad}px;display:flex;flex-direction:column;align-items:center;gap:20px"></div>
-      <div style="position:fixed;bottom:24px;z-index:50;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);display:flex;align-items:center;gap:12px;padding:8px 14px;border-radius:30px;color:#fff;font-size:12.5px;box-shadow:0 4px 20px rgba(0,0,0,0.35)" id="pdf_navbar">
-        <button id="pdf_prev" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">‹</button>
+      <div style="position:fixed;bottom:24px;z-index:50;background:#fff;border:1px solid #e0ddd5;display:flex;align-items:center;gap:9px;padding:5px 11px;border-radius:20px;color:#3a3733;font-size:12px;font-weight:500;box-shadow:0 3px 16px rgba(0,0,0,0.14)" id="pdf_navbar">
+        <button id="pdf_prev" style="background:#f0eee9;border:none;color:#3a3733;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:600;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0">‹</button>
         <span id="pdf_counter" style="min-width:84px;text-align:center;font-weight:500">Page ${current} of ${total}</span>
-        <button id="pdf_next" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">›</button>
+        <button id="pdf_next" style="background:#f0eee9;border:none;color:#3a3733;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:600;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0">›</button>
       </div>`;
     const pagesBox = container.querySelector('#pdf_pages');
     const counter = container.querySelector('#pdf_counter');
@@ -1041,7 +1041,7 @@ async function renderPdfFull(container, url) {
       canvas.style.width = (viewport.width / dpr) + 'px';
       canvas.style.height = (viewport.height / dpr) + 'px';
       canvas.style.maxWidth = '100%';
-      canvas.style.boxShadow = '0 8px 40px rgba(0,0,0,0.4)';
+      canvas.style.boxShadow = '0 4px 20px rgba(0,0,0,0.13)';
       canvas.style.borderRadius = '3px';
       canvas.style.background = '#fff';
       canvas.dataset.page = n;
@@ -1074,8 +1074,8 @@ async function renderPdfFull(container, url) {
 
 // ── OFFICE → PDF (via CloudConvert Edge Function, then PDF.js viewer) ──
 async function renderOfficeAsPdf(container, fileUrl, fileName, ftype, thumbUrl) {
-  container.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:calc(100vh - 54px);color:rgba(255,255,255,0.6);font-size:13px;gap:14px">
-    <div style="width:30px;height:30px;border:3px solid rgba(255,255,255,0.2);border-top-color:rgba(255,255,255,0.7);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+  container.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:calc(100vh - 54px);color:#9a958a;font-size:13px;gap:14px">
+    <div style="width:30px;height:30px;border:3px solid rgba(15,113,115,0.18);border-top-color:#0f7173;border-radius:50%;animation:spin 0.8s linear infinite"></div>
     <div style="text-align:center;line-height:1.6">Preparing preview…<br><span style="font-size:11px;color:rgba(255,255,255,0.4)">First view may take a few seconds</span></div>
   </div>`;
 
@@ -1119,8 +1119,8 @@ async function renderOfficeAsPdf(container, fileUrl, fileName, ftype, thumbUrl) 
 // ── SLIDES VIEWER (PPT → PDF, one slide at a time + thumbnail strip) ──
 async function renderSlidesViewer(container, url) {
   if(typeof pdfjsLib === 'undefined') { renderPdfFull(container, url); return; }
-  container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:calc(100vh - 54px);color:rgba(255,255,255,0.5);font-size:13px;gap:10px">
-    <div style="width:28px;height:28px;border:3px solid rgba(255,255,255,0.2);border-top-color:rgba(255,255,255,0.7);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+  container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:calc(100vh - 54px);color:#9a958a;font-size:13px;gap:10px">
+    <div style="width:28px;height:28px;border:3px solid rgba(15,113,115,0.18);border-top-color:#0f7173;border-radius:50%;animation:spin 0.8s linear infinite"></div>
     Loading slides…
   </div>`;
   try {
@@ -1134,15 +1134,15 @@ async function renderSlidesViewer(container, url) {
     container.innerHTML = `
       <div style="display:flex;width:100%;${isMob?'':'height:100%;'}${rowMinH}">
         <!-- Thumbnail strip (left) -->
-        <div id="slide_thumbs" class="slides-thumbs" style="width:118px;flex-shrink:0;background:rgba(0,0,0,0.22);overflow-y:auto;padding:12px 9px;display:flex;flex-direction:column;gap:9px;max-height:calc(100vh - 54px)"></div>
+        <div id="slide_thumbs" class="slides-thumbs" style="width:118px;flex-shrink:0;background:rgba(0,0,0,0.05);overflow-y:auto;padding:12px 9px;display:flex;flex-direction:column;gap:9px;max-height:calc(100vh - 54px)"></div>
         <!-- Main slide area -->
         <div id="slide_area" class="slides-main" style="flex:1;display:flex;align-items:center;justify-content:center;padding:28px;position:relative;min-width:0;${rowMinH}">
-          <canvas id="slide_main" style="box-shadow:0 10px 50px rgba(0,0,0,0.5);border-radius:4px;background:#fff;display:block"></canvas>
+          <canvas id="slide_main" style="box-shadow:0 6px 28px rgba(0,0,0,0.16);border-radius:4px;background:#fff;display:block"></canvas>
           <!-- Floating nav pill (centered on the slide area) -->
-          <div id="slide_navpill" style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:50;background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);display:flex;align-items:center;gap:14px;padding:9px 14px;border-radius:30px;color:#fff;font-size:12.5px;box-shadow:0 4px 20px rgba(0,0,0,0.35)">
-            <button id="slide_prev" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">‹</button>
-            <span id="slide_counter" style="min-width:90px;text-align:center;font-weight:500">Slide ${current} of ${total}</span>
-            <button id="slide_next" style="background:rgba(255,255,255,0.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">›</button>
+          <div id="slide_navpill" style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:50;background:#fff;border:1px solid #e0ddd5;display:flex;align-items:center;gap:9px;padding:5px 11px;border-radius:20px;color:#3a3733;font-size:12px;font-weight:500;box-shadow:0 3px 14px rgba(0,0,0,0.12)">
+            <button id="slide_prev" style="background:#f0eee9;border:none;color:#3a3733;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:600;line-height:1;padding:0;display:flex;align-items:center;justify-content:center">‹</button>
+            <span id="slide_counter" style="min-width:84px;text-align:center;font-weight:500">Slide ${current} of ${total}</span>
+            <button id="slide_next" style="background:#f0eee9;border:none;color:#3a3733;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:600;line-height:1;padding:0;display:flex;align-items:center;justify-content:center">›</button>
           </div>
         </div>
       </div>
@@ -1267,25 +1267,25 @@ function renderOfficeViewer(container, url, ftype, thumbUrl) {
   // wdHideGridlines, wdHideHeaders, wdAllowInteractivity keep it as a clean reader
   const officeUrl = 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(url) + '&wdAllowInteractivity=False&wdHideGridlines=True&wdHideHeaders=True';
   container.innerHTML = `
-    <div style="width:100%;flex:1;position:relative;min-height:calc(100vh - 54px);background:#2a2a2a;overflow:hidden">
-      <div id="office_loading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:rgba(255,255,255,0.6);font-size:13px;gap:10px;z-index:1">
-        <div style="width:28px;height:28px;border:3px solid rgba(255,255,255,0.2);border-top-color:rgba(255,255,255,0.7);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+    <div style="width:100%;flex:1;position:relative;min-height:calc(100vh - 54px);background:#f0eee9;overflow:hidden">
+      <div id="office_loading" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#9a958a;font-size:13px;gap:10px;z-index:1">
+        <div style="width:28px;height:28px;border:3px solid rgba(15,113,115,0.18);border-top-color:#0f7173;border-radius:50%;animation:spin 0.8s linear infinite"></div>
         Loading document…
       </div>
       <iframe src="${officeUrl}" style="width:100%;height:100%;min-height:calc(100vh - 54px);border:none;position:relative;z-index:2" onload="var l=document.getElementById('office_loading');if(l)l.style.display='none'"></iframe>
-      <div style="position:absolute;bottom:0;left:0;right:0;height:34px;background:#2a2a2a;z-index:3;pointer-events:none"></div>
+      <div style="position:absolute;bottom:0;left:0;right:0;height:34px;background:#f0eee9;z-index:3;pointer-events:none"></div>
     </div>
   `;
 }
 
 // ── EXCEL VIEWER (SheetJS — native rendering in browser) ──
 async function renderExcelViewer(container, url) {
-  container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:calc(100vh - 54px);color:rgba(255,255,255,0.5);font-size:13px;gap:10px;flex-direction:column">
-    <div style="width:28px;height:28px;border:3px solid rgba(255,255,255,0.2);border-top-color:rgba(255,255,255,0.7);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+  container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:calc(100vh - 54px);color:#9a958a;font-size:13px;gap:10px;flex-direction:column">
+    <div style="width:28px;height:28px;border:3px solid rgba(15,113,115,0.18);border-top-color:#0f7173;border-radius:50%;animation:spin 0.8s linear infinite"></div>
     Loading spreadsheet…
   </div>`;
   if(typeof XLSX === 'undefined') {
-    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:calc(100vh - 54px);color:rgba(255,255,255,0.5);font-size:13px">Preview unavailable</div>`;
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:calc(100vh - 54px);color:#9a958a;font-size:13px">Preview unavailable</div>`;
     return;
   }
   try {
@@ -1389,7 +1389,7 @@ async function renderExcelViewer(container, url) {
     };
 
     const tabsHtml = sheetNames.map((name, i) =>
-      `<button class="xls-tab" data-sheet="${i}" style="background:${i===activeSheet?'#fff':'rgba(255,255,255,0.08)'};color:${i===activeSheet?'#107c41':'rgba(255,255,255,0.7)'};border:none;padding:7px 16px;font-size:12px;font-weight:${i===activeSheet?'600':'500'};cursor:pointer;border-radius:7px 7px 0 0;white-space:nowrap">${name}</button>`
+      `<button class="xls-tab" data-sheet="${i}" style="background:${i===activeSheet?'#fff':'rgba(0,0,0,0.05)'};color:${i===activeSheet?'#107c41':'#6b6758'};border:1px solid ${i===activeSheet?'#e0ddd5':'transparent'};border-bottom:none;padding:7px 16px;font-size:12px;font-weight:${i===activeSheet?'700':'500'};cursor:pointer;border-radius:7px 7px 0 0;white-space:nowrap">${name}</button>`
     ).join('');
 
     container.innerHTML = `
@@ -1400,7 +1400,7 @@ async function renderExcelViewer(container, url) {
           <span style="font-style:italic;color:#c2bdb2;font-size:14px;font-weight:600;font-family:Georgia,serif;flex-shrink:0">fx</span>
           <span id="xls_formula" style="font-size:13px;color:#9a958a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;font-weight:450">Click a cell to see its value</span>
         </div>
-        <div class="xls-sheet" style="background:#fff;flex:1;margin:0 20px;border-radius:0 0 12px 12px;overflow:auto;box-shadow:0 8px 40px rgba(0,0,0,0.4);max-height:calc(100vh - 180px)">
+        <div class="xls-sheet" style="background:#fff;flex:1;margin:0 20px;border-radius:0 0 12px 12px;overflow:auto;box-shadow:0 4px 22px rgba(0,0,0,0.12);max-height:calc(100vh - 180px)">
           <div id="xls_table" style="overflow:auto;width:100%;height:100%">${buildSheetTable(activeSheet)}</div>
         </div>
         ${sheetNames.length > 1 ? `<div style="display:flex;gap:4px;padding:14px 20px 16px;flex-wrap:wrap" id="xls_tabs">${tabsHtml}</div>` : '<div style="height:16px"></div>'}
@@ -1454,16 +1454,18 @@ async function renderExcelViewer(container, url) {
           formulaBox.style.fontSize = '13px';
           attachCellHandlers();
           container.querySelectorAll('.xls-tab').forEach((b, i) => {
-            b.style.background = i===activeSheet ? '#fff' : 'rgba(255,255,255,0.08)';
-            b.style.color = i===activeSheet ? '#107c41' : 'rgba(255,255,255,0.7)';
-            b.style.fontWeight = i===activeSheet ? '600' : '500';
+            b.style.background = i===activeSheet ? '#fff' : 'rgba(0,0,0,0.05)';
+            b.style.color = i===activeSheet ? '#107c41' : '#6b6758';
+            b.style.border = i===activeSheet ? '1px solid #e0ddd5' : '1px solid transparent';
+            b.style.borderBottom = 'none';
+            b.style.fontWeight = i===activeSheet ? '700' : '500';
           });
         };
       });
     }
   } catch(err) {
     console.warn('[FileSilver] Excel render failed:', err.message || err);
-    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:calc(100vh - 54px);color:rgba(255,255,255,0.5);font-size:13px;text-align:center;padding:40px">Could not load preview.<br>Try downloading the file instead.</div>`;
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:calc(100vh - 54px);color:#9a958a;font-size:13px;text-align:center;padding:40px">Could not load preview.<br>Try downloading the file instead.</div>`;
   }
 }
 
