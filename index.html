@@ -325,50 +325,52 @@ input[type=file]{display:none}
   .type-pills{gap:5px}
   .tpill{padding:6px 14px;font-size:13px}
   /* ============================================================
-     DOCUMENT PAGE — MOBILE: one coherent "document card" system.
-     Order (variant B): type+title → DOCUMENT → description →
-     download → author → stats/tags/comments. Every section shares
-     the same 16px gutter and a steady vertical rhythm; sections are
-     separated by hairlines, not random background blocks.
+     DOCUMENT PAGE — MOBILE: rebuilt clean. The viewer is moved (via JS)
+     INTO the info column right after the title, so source order is
+     title → viewer → description → actions → author → stats/tags/comments.
+     The info panel is a single full-width block with a uniform 16px side
+     padding, so EVERY child — including the viewer — shares the exact
+     same width. No sticky, no grid, no per-element gutters.
      ============================================================ */
-  #DP_GRID{grid-template-columns:1fr !important;display:flex !important;flex-direction:column;background:#fff}
-  .dp-info{display:contents !important}
-  /* dp-head dissolves so its children (type chip, title, description)
-     can be ordered individually within the flex column. */
-  .dp-head{display:contents !important}
+  #DP_GRID{display:flex !important;flex-direction:column !important;grid-template-columns:none !important;background:#fff}
+  /* The original viewer wrapper slot is now empty (viewer moved into info) */
+  #DP_GRID > div:first-child:empty{display:none !important}
 
-  /* type chip + title sit at the very top */
-  .dp-head > span{order:1;margin:20px 16px 0;display:inline-block;width:fit-content}
-  .dp-info h1{order:2;font-size:23px !important;line-height:1.22 !important;margin:11px 16px 14px !important;letter-spacing:-0.3px}
+  /* Info panel: full-width block, uniform 16px gutter, no sticky */
+  .dp-info{padding:18px 16px 28px !important;background:#fff !important;display:flex !important;flex-direction:column !important;gap:0 !important;position:static !important;max-height:none !important;overflow:visible !important;width:100% !important}
 
-  /* THE DOCUMENT — right under the title. Framed, rounded, tied to the page. */
-  #DP_GRID > div:first-child{order:3;margin:0 16px !important;border-radius:16px !important;overflow:hidden !important;background:#1f1f1f !important;box-shadow:0 6px 26px rgba(0,0,0,0.16) !important;min-height:0 !important}
-  #DP_VIEWER{min-height:0 !important;border-radius:16px !important;overflow:hidden}
+  /* Title block */
+  .dp-head{display:flex !important;flex-direction:column !important;align-items:flex-start !important}
+  .dp-head > span{display:inline-block;width:fit-content}
+  .dp-info h1{font-size:23px !important;line-height:1.22 !important;margin:11px 0 14px !important;letter-spacing:-0.3px}
+  .dp-desc{margin:16px 0 0 !important;font-size:13.5px !important;line-height:1.55 !important}
+
+  /* The dark viewer: now a normal child of .dp-info → already inset 16px
+     each side by the panel padding. Centered, framed, full usable width. */
+  #DP_VIEWER{min-height:0 !important;width:100% !important;align-items:stretch !important;border-radius:16px !important;overflow:hidden !important;background:#1f1f1f !important;box-shadow:0 6px 26px rgba(0,0,0,0.16) !important;display:flex !important;flex-direction:column !important;margin:0 !important}
   #DP_VIEWER div{min-height:0 !important}
-  #DP_VIEWER > div{height:auto !important}
-  .slides-main{padding:30px 16px !important;height:auto !important;flex-direction:column !important;gap:18px !important;display:flex !important}
+  #DP_VIEWER > div{height:auto !important;width:100% !important}
+
+  /* PPT slide area: centered, full width, breathing room */
+  .slides-main{padding:30px 16px !important;height:auto !important;flex-direction:column !important;gap:18px !important;display:flex !important;align-items:center !important;justify-content:center !important;width:100% !important}
   #slide_navpill{position:static !important;transform:none !important;bottom:auto !important;align-self:center}
   .slides-thumbs{display:none !important}
   #DP_VIEWER iframe{min-height:70vh !important}
 
-  /* description — under the document */
-  .dp-desc{order:4;margin:16px 16px 0 !important;font-size:13.5px !important;line-height:1.55 !important}
-
-  /* actions — download hero + clean ghost icons, no caged white box */
-  .dp-actions{order:5;background:#fff !important;padding:0 16px !important;margin:16px 0 0 !important;gap:9px !important}
+  /* actions */
+  .dp-actions{background:#fff !important;padding:0 !important;margin:18px 0 0 !important;gap:9px !important;display:flex !important}
   .dp-actions > a{padding:13px !important;border-radius:11px !important;font-size:14px !important;font-weight:650 !important;box-shadow:0 1px 2px rgba(15,113,115,0.25)}
   .dp-actions > button{width:46px;height:46px;padding:0 !important;border-radius:11px !important;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#fff !important;border:1px solid var(--bor) !important}
   .dp-actions > button svg{width:17px !important;height:17px !important}
 
-  /* author — a quiet row, hairline above, consistent rhythm */
-  .dp-author{order:6;margin:20px 0 0 !important;padding:20px 16px 0 !important;background:#fff !important;border:none !important;border-radius:0 !important;border-top:1px solid var(--bor) !important}
-  .dp-author > div:first-child{width:38px !important;height:38px !important;font-size:13px !important}
+  /* author */
+  .dp-author{margin:20px 0 0 !important;padding:20px 0 0 !important;background:#fff !important;border:none !important;border-top:1px solid var(--bor) !important;border-radius:0 !important}
 
-  /* footer — stats / tags / comments, even spacing, single clean dividers */
-  .dp-foot{order:7;background:#fff !important;padding:20px 16px 28px !important;margin-top:0 !important;gap:20px !important}
+  /* footer */
+  .dp-foot{background:#fff !important;padding:20px 0 0 !important;margin:0 !important;gap:20px !important}
   .dp-foot > div:first-child{border-top:none !important;padding-top:0 !important}
 
-  /* Cards (feed): bigger preview + tappable buttons */
+  /* Cards (feed) */
   .cth{height:220px !important}
   .ctitle{font-size:15px !important;min-height:auto !important}
   .can{font-size:13px !important}
@@ -913,6 +915,20 @@ async function buildDocPage(id) {
   </style>`;
   
   const viewer = document.getElementById('DP_VIEWER');
+  // MOBILE: physically move the dark viewer INTO the info column, right
+  // after the title block. Source order becomes title→viewer→rest, so every
+  // block (viewer included) shares the info panel's uniform 16px gutter and
+  // the viewer is centered full-width. We move #DP_VIEWER itself (not its
+  // outer #2a2a2a wrapper) so there's no double background.
+  if(window.innerWidth <= 760 && viewer) {
+    const outerWrap = viewer.parentElement;          // empty #2a2a2a frame left behind
+    const info = document.querySelector('.dp-info');
+    const head = document.querySelector('.dp-head');
+    if(info && head) {
+      info.insertBefore(viewer, head.nextSibling);
+      if(outerWrap) outerWrap.style.display = 'none';
+    }
+  }
   if(viewer) {
     const isSupabase = doc.file_url && doc.file_url.indexOf('supabase.co/storage') !== -1;
     if(doc.file_type === 'pdf' && isSupabase) {
