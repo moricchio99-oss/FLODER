@@ -402,7 +402,15 @@ input[type=file]{display:none}
 // ── SUPABASE CONFIG ──
 const SUPABASE_URL = 'https://anfqwtiugwknlcidbdzh.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_e7q72bBIfa98OJEOssnB7g_3MbAsBp3';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    // FIX upload bloccato: in Safari il "lock" interno di Supabase (navigator.locks)
+    // poteva restare chiuso e bloccare per sempre l'upload (che aspetta il token di sessione).
+    // Qui lo sostituiamo con un lock "passa-tutto" (esegue la funzione senza bloccare).
+    // Sicuro per un'app a tab singolo come questa.
+    lock: async (_name, _acquireTimeout, fn) => await fn()
+  }
+});
 
 // ── STATO APP ──
 const S = {
@@ -446,17 +454,21 @@ async function init() {
   parseUrl();
   const { data: { session } } = await sb.auth.getSession();
   if (session) await loadProfile(session.user);
-  sb.auth.onAuthStateChange(async (event, session) => {
+  sb.auth.onAuthStateChange((event, session) => {
+    // IMPORTANTE: non usare await su chiamate Supabase DENTRO questo callback
+    // (Supabase lo sconsiglia: causa deadlock del lock di sessione).
+    // Rimandiamo il lavoro fuori dal callback con setTimeout(...,0).
     if (session) {
-      await loadProfile(session.user);
+      setTimeout(async () => {
+        await loadProfile(session.user);
+        render();
+        // If the user was trying to download before signing in, resume it now.
+        if (S.pendingDownload) setTimeout(resumePendingDownload, 300);
+      }, 0);
     } else {
       S.user = null;
       S.profile = null;
-    }
-    render();
-    // If the user was trying to download before signing in, resume it now.
-    if (session && S.pendingDownload) {
-      setTimeout(resumePendingDownload, 300);
+      render();
     }
   });
   render();
