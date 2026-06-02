@@ -55,6 +55,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script>
   if (window.pdfjsLib) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -1304,102 +1305,181 @@ async function renderExcelViewer(container, url) {
     <div style="width:28px;height:28px;border:3px solid rgba(15,113,115,0.18);border-top-color:#0f7173;border-radius:50%;animation:spin 0.8s linear infinite"></div>
     Loading spreadsheet…
   </div>`;
-  if(typeof XLSX === 'undefined') {
+  if(typeof ExcelJS === 'undefined') {
     container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:calc(100vh - 54px);color:#9a958a;font-size:13px">Preview unavailable</div>`;
     return;
   }
   try {
     const resp = await fetch(url);
     const buf = await resp.arrayBuffer();
-    const wb = XLSX.read(buf, { type: 'array', cellFormula: true, cellNF: true });
-    const sheetNames = wb.SheetNames;
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buf);
+    const sheetNames = workbook.worksheets.map(w => w.name);
     let activeSheet = 0;
 
-    const colLabel = (n) => {
-      let s = '';
-      n = n + 1;
-      while(n > 0) { let m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
-      return s;
-    };
-
     const isMobileXls = window.innerWidth <= 760;
-    const baseColW = isMobileXls ? 52 : 90;   // narrower columns on phones → more columns visible
+    const baseColW = isMobileXls ? 52 : 90;
     const minColW = isMobileXls ? 34 : 48;
-    const cellFont = isMobileXls ? 11 : 12.5;
+    const defaultFontPx = isMobileXls ? 11 : 12.5;
+
+    const colLabel = (n) => { let s=''; n=n+1; while(n>0){let m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26);} return s; };
+    const escHtml = (s) => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const argbHex = (a) => { if(!a||typeof a!=='string') return null; return '#' + (a.length===8 ? a.substring(2) : a); };
+    const parseAddr = (s) => { const m=s.match(/^([A-Z]+)(\d+)$/); if(!m) return null; let col=0; for(const ch of m[1]) col=col*26 + (ch.charCodeAt(0)-64); return {col, row:parseInt(m[2])}; };
+    const parseRange = (r) => { const [a,b]=r.split(':'); const A=parseAddr(a), B=parseAddr(b); return {top:A.row,left:A.col,bottom:B.row,right:B.col}; };
 
     const buildSheetTable = (idx) => {
-      const ws = wb.Sheets[sheetNames[idx]];
-      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
-      // Find the real extent of actual content (some templates declare a huge
-      // !ref full of empty cells, which renders as an ugly empty grid).
-      let lastRow = 0, lastCol = 0;
-      for(let r = range.s.r; r <= range.e.r; r++) {
-        for(let c = range.s.c; c <= range.e.c; c++) {
-          const cell = ws[XLSX.utils.encode_cell({ r, c })];
-          if(cell && cell.v !== undefined && cell.v !== null && String(cell.v).trim() !== '') {
-            if(r > lastRow) lastRow = r;
-            if(c > lastCol) lastCol = c;
-          }
+      const ws = workbook.worksheets[idx];
+
+      // Estensione reale: scansiono per trovare l'ultima riga/colonna con vero contenuto
+      // (alcuni file dichiarano range gonfiati che riempirebbero la pagina di celle vuote).
+      const maxScanRow = Math.min(ws.rowCount || 1, 500);
+      const maxScanCol = Math.min(ws.columnCount || 1, 50);
+      let lastRow = 1, lastCol = 1;
+      for(let r=1; r<=maxScanRow; r++) {
+        const row = ws.getRow(r);
+        for(let c=1; c<=maxScanCol; c++) {
+          const cell = row.getCell(c);
+          const t = (cell.text || (cell.value!=null?String(cell.value):'')).trim();
+          if(t !== '') { if(r>lastRow) lastRow=r; if(c>lastCol) lastCol=c; }
         }
       }
-      // Add a small padding of empty cells so it still looks like a spreadsheet,
-      // but cap it tightly so we don't render hundreds of blank rows/cols.
-      const maxCol = Math.min(range.e.c, lastCol + 1);
-      const maxRow = Math.min(range.e.r, lastRow + 2);
-      const colWidths = (ws['!cols'] || []).map(c => c && c.wch ? c.wch : null);
-      const merges = ws['!merges'] || [];
-      const isMerged = (r, c) => merges.find(m => r>=m.s.r && r<=m.e.r && c>=m.s.c && c<=m.e.c);
-      const isMergeHead = (r, c) => merges.find(m => r===m.s.r && c===m.s.c);
-      // Detect which columns are entirely empty (within the content range) so we
-      // can render them narrow and not waste horizontal space, especially on mobile.
+      const maxRow = Math.min(maxScanRow, lastRow + 2);
+      const maxCol = Math.min(maxScanCol, lastCol + 1);
+
+      // Rilevo colonne completamente vuote → le rendo strette (come faceva già il viewer)
       const colHasContent = [];
-      for(let c = 0; c <= maxCol; c++) {
-        let has = false;
-        for(let r = 0; r <= maxRow; r++) {
-          const cell = ws[XLSX.utils.encode_cell({ r, c })];
-          if(cell && cell.v !== undefined && cell.v !== null && String(cell.v).trim() !== '') { has = true; break; }
+      for(let c=1; c<=maxCol; c++) {
+        let has=false;
+        for(let r=1; r<=maxRow; r++) {
+          const cell = ws.getRow(r).getCell(c);
+          const t = (cell.text || (cell.value!=null?String(cell.value):'')).trim();
+          if(t!==''){has=true;break;}
         }
-        colHasContent[c] = has;
+        colHasContent[c]=has;
       }
       const widthOf = (c) => {
-        if(!colHasContent[c]) return isMobileXls ? 18 : 34;   // empty column → thin
-        return colWidths[c] ? Math.max(minColW, colWidths[c]*(isMobileXls?4.2:7)) : baseColW;
+        if(!colHasContent[c]) return isMobileXls ? 18 : 34;
+        const col = ws.getColumn(c);
+        if(col && col.width) return Math.max(minColW, col.width * (isMobileXls?4.2:7));
+        return baseColW;
       };
 
-      let html = `<table style="border-collapse:collapse;font-size:${cellFont}px;font-family:-apple-system,sans-serif;background:#fff;width:100%">`;
-      // Header row with column letters
-      html += '<thead><tr><th style="background:#f1f0ec;border:1px solid #d8d5cd;min-width:34px;height:22px;position:sticky;top:0;left:0;z-index:3"></th>';
-      for(let c = 0; c <= maxCol; c++) {
-        const w = widthOf(c);
-        html += `<th style="background:#f1f0ec;border:1px solid #d8d5cd;font-weight:600;color:#6b6758;font-size:11px;height:22px;min-width:${w}px;max-width:${w}px;position:sticky;top:0;z-index:2">${colLabel(c)}</th>`;
+      // Merges (uso API pubblica ws.model.merges → array di stringhe "A1:B2")
+      const mergeOrigin = new Map();   // "r,c" → {rowSpan, colSpan}
+      const mergeSkip = new Set();     // "r,c" da saltare
+      const mergeRanges = (ws.model && ws.model.merges) || [];
+      for(const range of mergeRanges) {
+        const m = parseRange(range);
+        if(!m) continue;
+        mergeOrigin.set(`${m.top},${m.left}`, { rowSpan: m.bottom-m.top+1, colSpan: m.right-m.left+1 });
+        for(let r=m.top; r<=m.bottom; r++)
+          for(let c=m.left; c<=m.right; c++)
+            if(r!==m.top || c!==m.left) mergeSkip.add(`${r},${c}`);
       }
-      html += '<th style="background:#f1f0ec;border:1px solid #d8d5cd;height:22px;width:auto;position:sticky;top:0;z-index:2"></th>';
-      html += '</tr></thead><tbody>';
-      for(let r = 0; r <= maxRow; r++) {
-        html += `<tr><td style="background:#f1f0ec;border:1px solid #d8d5cd;font-weight:600;color:#6b6758;font-size:11px;text-align:center;min-width:34px;position:sticky;left:0;z-index:1">${r+1}</td>`;
-        for(let c = 0; c <= maxCol; c++) {
-          const merged = isMerged(r, c);
-          if(merged && !isMergeHead(r, c)) continue; // skip cells covered by a merge
-          const addr = XLSX.utils.encode_cell({ r, c });
-          const cell = ws[addr];
-          let val = cell ? (cell.w !== undefined ? cell.w : cell.v) : '';
-          if(val === undefined || val === null) val = '';
-          let span = '';
-          if(merged && isMergeHead(r, c)) {
-            const cs = merged.e.c - merged.s.c + 1;
-            const rs = merged.e.r - merged.s.r + 1;
-            if(cs > 1) span += ` colspan="${cs}"`;
-            if(rs > 1) span += ` rowspan="${rs}"`;
-          }
-          // Detect numeric for right-alignment
-          const isNum = cell && cell.t === 'n';
-          const bold = cell && cell.s && cell.s.font && cell.s.font.bold;
+
+      // Padding cella (più stretto su mobile)
+      const cellPad = isMobileXls ? '3px 6px' : '3px 8px';
+
+      let html = '<table style="border-collapse:collapse;font-family:-apple-system,BlinkMacSystemFont,Calibri,Helvetica,Arial,sans-serif">';
+
+      // Header: lettere colonne (sticky)
+      html += '<thead><tr><th style="background:#f1f0ec;border:1px solid #d8d5cd;min-width:34px;height:22px;position:sticky;top:0;left:0;z-index:3"></th>';
+      for(let c=1; c<=maxCol; c++) {
+        const w = widthOf(c);
+        html += `<th style="background:#f1f0ec;border:1px solid #d8d5cd;font-weight:600;color:#6b6758;font-size:11px;height:22px;min-width:${w}px;max-width:${w}px;position:sticky;top:0;z-index:2">${colLabel(c-1)}</th>`;
+      }
+      html += '<th style="background:#f1f0ec;border:1px solid #d8d5cd;height:22px;width:auto;position:sticky;top:0;z-index:2"></th></tr></thead><tbody>';
+
+      // Righe dati
+      for(let r=1; r<=maxRow; r++) {
+        html += `<tr><td style="background:#f1f0ec;border:1px solid #d8d5cd;font-weight:600;color:#6b6758;font-size:11px;text-align:center;min-width:34px;position:sticky;left:0;z-index:1">${r}</td>`;
+
+        for(let c=1; c<=maxCol; c++) {
+          if(mergeSkip.has(`${r},${c}`)) continue;
+          const cell = ws.getRow(r).getCell(c);
           const w = widthOf(c);
-          const hasFormula = cell && cell.f;
-          const cellContent = hasFormula ? ('=' + cell.f) : (cell ? String(cell.v !== undefined ? cell.v : '') : '');
-          const dataAttr = ` data-addr="${addr}" data-content="${String(cellContent).replace(/"/g,'&quot;')}"`;
+
+          // Span (per le celle origine di un merge)
+          const origin = mergeOrigin.get(`${r},${c}`);
+          const spanAttr = origin ? ` rowspan="${origin.rowSpan}" colspan="${origin.colSpan}"` : '';
+
+          // Testo visibile
+          let displayText = cell.text || '';
+          if(!displayText && cell.value != null) {
+            if(typeof cell.value === 'object') {
+              if(cell.value.result != null) displayText = String(cell.value.result);
+              else if(cell.value.richText) displayText = cell.value.richText.map(p=>p.text).join('');
+              else displayText = '';
+            } else {
+              displayText = String(cell.value);
+            }
+          }
+
+          // Formula?
+          const hasFormula = !!cell.formula;
+          const rawContent = hasFormula ? ('=' + cell.formula) : displayText;
+
+          // Costruzione stili inline a partire da fill/font/border/alignment
+          const sty = [];
+
+          // Larghezza
+          sty.push(`min-width:${w}px;max-width:${w*2}px`);
+
+          // Font (size, bold, italic, color)
+          const font = cell.font || {};
+          const fontSizeNum = font.size ? Math.max(font.size * (isMobileXls?0.88:0.95), isMobileXls?9.5:10.5) : defaultFontPx;
+          sty.push(`font-size:${fontSizeNum}px`);
+          if(font.bold) sty.push('font-weight:700');
+          if(font.italic) sty.push('font-style:italic');
+          const fcol = font.color && font.color.argb ? argbHex(font.color.argb) : null;
+          sty.push(`color:${fcol || '#18170f'}`);
+          if(font.name && /[A-Za-z]/.test(font.name)) sty.push(`font-family:'${font.name}',-apple-system,BlinkMacSystemFont,Calibri,sans-serif`);
+
+          // Sfondo (fill solido)
+          const fill = cell.fill;
+          if(fill && fill.type === 'pattern' && fill.pattern === 'solid' && fill.fgColor && fill.fgColor.argb) {
+            const bg = argbHex(fill.fgColor.argb);
+            if(bg) sty.push(`background:${bg}`);
+          }
+
+          // Allineamento orizzontale (default: numero/formula a destra, testo a sinistra)
+          const align = cell.alignment || {};
+          let textAlign = align.horizontal;
+          if(!textAlign || textAlign === 'general') {
+            textAlign = (cell.type === 2 || cell.type === 6) ? 'right' : 'left';
+          }
+          sty.push(`text-align:${textAlign}`);
+
+          // Allineamento verticale
+          if(align.vertical === 'middle') sty.push('vertical-align:middle');
+          else if(align.vertical === 'top') sty.push('vertical-align:top');
+
+          // Bordi cella
+          const b = cell.border || {};
+          const borderSide = (s) => {
+            if(!s || !s.style) return '1px solid #e2e0d8';
+            const wpx = (s.style==='thick'||s.style==='double') ? '2px' : '1px';
+            const col = (s.color && s.color.argb) ? argbHex(s.color.argb) : '#9a958a';
+            return `${wpx} solid ${col}`;
+          };
+          sty.push(`border-top:${borderSide(b.top)}`);
+          sty.push(`border-right:${borderSide(b.right)}`);
+          sty.push(`border-bottom:${borderSide(b.bottom)}`);
+          sty.push(`border-left:${borderSide(b.left)}`);
+
+          // Comuni
+          sty.push(`padding:${cellPad}`);
+          sty.push('height:22px');
+          sty.push('white-space:nowrap');
+          sty.push('overflow:hidden');
+          sty.push('text-overflow:ellipsis');
+          sty.push('cursor:cell');
+          sty.push('position:relative');
+
+          const addr = colLabel(c-1) + r;
           const formulaDot = hasFormula ? '<span style="position:absolute;top:2px;right:2px;width:4px;height:4px;background:#107c41;border-radius:50%"></span>' : '';
-          html += `<td${span}${dataAttr} class="xls-cell" style="position:relative;border:1px solid #e2e0d8;padding:3px ${isMobileXls?6:8}px;height:22px;color:#18170f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${w*2}px;text-align:${isNum?'right':'left'};cursor:cell;${bold?'font-weight:700;':''}">${String(val)}${formulaDot}</td>`;
+          html += `<td${spanAttr} data-addr="${addr}" data-content="${escHtml(rawContent)}" class="xls-cell" style="${sty.join(';')}">${escHtml(displayText)}${formulaDot}</td>`;
         }
         html += '<td style="border:1px solid #e2e0d8;width:auto"></td>';
         html += '</tr>';
@@ -1409,7 +1489,7 @@ async function renderExcelViewer(container, url) {
     };
 
     const tabsHtml = sheetNames.map((name, i) =>
-      `<button class="xls-tab" data-sheet="${i}" style="background:${i===activeSheet?'#fff':'rgba(0,0,0,0.05)'};color:${i===activeSheet?'#107c41':'#6b6758'};border:1px solid ${i===activeSheet?'#e0ddd5':'transparent'};border-bottom:none;padding:7px 16px;font-size:12px;font-weight:${i===activeSheet?'700':'500'};cursor:pointer;border-radius:7px 7px 0 0;white-space:nowrap">${name}</button>`
+      `<button class="xls-tab" data-sheet="${i}" style="background:${i===activeSheet?'#fff':'rgba(0,0,0,0.05)'};color:${i===activeSheet?'#107c41':'#6b6758'};border:1px solid ${i===activeSheet?'#e0ddd5':'transparent'};border-bottom:none;padding:7px 16px;font-size:12px;font-weight:${i===activeSheet?'700':'500'};cursor:pointer;border-radius:7px 7px 0 0;white-space:nowrap">${escHtml(name)}</button>`
     ).join('');
 
     container.innerHTML = `
@@ -1427,7 +1507,7 @@ async function renderExcelViewer(container, url) {
       </div>
     `;
 
-    // Cell click → show address + content/formula in the fx bar
+    // Click cella → mostra address + valore/formula nella barra fx
     const addrBox = container.querySelector('#xls_addr');
     const formulaBox = container.querySelector('#xls_formula');
     let selectedCell = null;
