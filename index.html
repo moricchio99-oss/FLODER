@@ -1886,9 +1886,9 @@ async function renderPdfThumbnail(container, url) {
   }
 }
 
-// Anteprima LIVE per gli Excel caricati dagli utenti (che non hanno una
-// thumbnail_url salvata): legge il file con SheetJS e disegna un mini-foglio
-// pulito con i dati reali. Nessun costo, nessuna immagine da salvare.
+// Anteprima card per gli Excel caricati dagli utenti.
+// Legge il primo foglio e mostra il contenuto pari pari come mini-tabella,
+// riga per riga (nessuna logica "titolo/sottotitolo": stesso stile per tutto).
 async function renderExcelThumbnail(container, url) {
   if(typeof XLSX === 'undefined') { renderStyledCard(container, 'excel'); return; }
   const esc = (s) => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -1900,8 +1900,8 @@ async function renderExcelThumbnail(container, url) {
     const ws = wb.Sheets[wb.SheetNames[0]];
     if(!ws || !ws['!ref']) throw new Error('empty');
     const range = XLSX.utils.decode_range(ws['!ref']);
-    // Trovo l'estensione reale del contenuto (molti template dichiarano un'area
-    // enorme piena di celle vuote: la ignoro per non disegnare una griglia vuota).
+
+    // Estensione reale (ignoro celle vuote: alcuni template dichiarano aree gonfiate).
     let lastRow = range.s.r - 1, lastCol = range.s.c - 1;
     const scanR = Math.min(range.e.r, range.s.r + 80);
     const scanC = Math.min(range.e.c, range.s.c + 30);
@@ -1915,27 +1915,42 @@ async function renderExcelThumbnail(container, url) {
       }
     }
     if(lastRow < range.s.r || lastCol < range.s.c) throw new Error('empty');
-    const startR = range.s.r, startC = range.s.c;
-    const maxR = Math.min(lastRow, startR + 8);   // fino a 9 righe
-    const maxC = Math.min(lastCol, startC + 5);    // fino a 6 colonne
-    let rows = '';
-    for(let r = startR; r <= maxR; r++) {
-      let cells = '';
-      for(let c = startC; c <= maxC; c++) {
+
+    // Mostro le prime righe non vuote (fino a 7), prime 6 colonne, in stile uniforme.
+    const MAX_ROWS = 7;
+    const maxC = Math.min(lastCol, range.s.c + 5);
+    let rows = '', rendered = 0;
+    for(let r = range.s.r; r <= lastRow && rendered < MAX_ROWS; r++) {
+      let hasContent = false;
+      for(let c = range.s.c; c <= maxC; c++) {
         const cell = ws[XLSX.utils.encode_cell({ r, c })];
-        let v = cell ? (cell.w != null ? cell.w : cell.v) : '';
-        v = String(v == null ? '' : v);
-        if(v.length > 16) v = v.slice(0,16) + '…';
-        const isHead = (r === startR);
-        cells += `<td style="border:1px solid #e7e5e0;padding:2.5px 5px;font-size:8px;line-height:1.3;white-space:nowrap;overflow:hidden;max-width:78px;color:${isHead?'#0b5d5e':'#4a4a48'};font-weight:${isHead?'700':'400'};background:${isHead?'#e8f3f1':'#fff'}">${esc(v)}</td>`;
+        if(cell && cell.v !== undefined && cell.v !== null && String(cell.v).trim() !== '') { hasContent = true; break; }
+      }
+      if(!hasContent) continue;
+      let cells = '';
+      for(let c = range.s.c; c <= maxC; c++) {
+        const cell = ws[XLSX.utils.encode_cell({ r, c })];
+        const rawV = cell ? (cell.w != null ? cell.w : cell.v) : '';
+        const rawStr = String(rawV == null ? '' : rawV);
+        const isDash = rawStr.trim() === '–' || rawStr.trim() === '-';
+        const isNum = cell && cell.t === 'n';
+        let v = rawStr;
+        if(v.length > 14) v = v.slice(0,14) + '…';
+        const align = (isNum || isDash) ? 'right' : 'left';
+        const color = isDash ? '#b0aea8' : '#2c2c2a';
+        cells += `<td style="border:0.5px solid #d8d5cd;padding:3px 5px;font-size:10px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:${align};color:${color}">${esc(v)}</td>`;
       }
       rows += `<tr>${cells}</tr>`;
+      rendered++;
     }
+    const tableHtml = rows
+      ? `<table style="width:100%;border-collapse:collapse;table-layout:fixed">${rows}</table>`
+      : '';
+
     container.innerHTML = `
-      <div style="width:100%;height:100%;background:#fff;border-radius:10px;overflow:hidden;position:relative">
-        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:#107c41;z-index:2"></div>
-        <table style="border-collapse:collapse;margin:11px 9px 0;table-layout:auto">${rows}</table>
-        <div style="position:absolute;bottom:0;left:0;right:0;height:38px;background:linear-gradient(180deg,rgba(255,255,255,0) 0%,#fff 85%);z-index:2"></div>
+      <div style="width:100%;height:100%;background:#fff;border-radius:10px;overflow:hidden;position:relative;padding:14px 14px 0;box-sizing:border-box">
+        ${tableHtml}
+        <div style="position:absolute;bottom:0;left:0;right:0;height:30px;background:linear-gradient(180deg,rgba(255,255,255,0) 0%,#fff 82%);pointer-events:none"></div>
       </div>`;
   } catch(e) {
     renderStyledCard(container, 'excel');
