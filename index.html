@@ -870,9 +870,9 @@ async function buildDocPage(id) {
   const tagsHtml = doc.tags?.length?doc.tags.map(t=>`<span style="background:var(--acb);color:var(--ac);font-size:11px;padding:3px 9px;border-radius:12px;font-weight:500">${t}</span>`).join(''):'';
 
   container.innerHTML = `
-  <div style="display:grid;grid-template-columns:2.4fr 1fr;align-items:start" id="DP_GRID">
+  <div style="display:grid;grid-template-columns:minmax(0,2.4fr) minmax(0,1fr);align-items:start" id="DP_GRID">
     
-    <div style="background:#f0eee9;padding:0;display:flex;flex-direction:column;${vwMinH}">
+    <div style="background:#f0eee9;padding:0;display:flex;flex-direction:column;min-width:0;overflow:hidden;${vwMinH}">
       <div id="DP_VIEWER" style="flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;${vwMinH}">
       </div>
     </div>
