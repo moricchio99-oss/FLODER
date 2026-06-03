@@ -1,7 +1,6 @@
 // FileSilver — Sitemap dinamica generata da Supabase.
-// Ogni richiesta a /sitemap.xml passa qui: legge tutti i documenti da Supabase
-// e genera l'XML aggiornato. Se Supabase fallisce, almeno restituisce la home
-// e mette il messaggio d'errore in un commento HTML per debug.
+// Legge tutti i documenti pubblicati e genera l'XML.
+// Se Supabase fallisce, mostra l'errore in un commento HTML.
 
 module.exports = async function handler(req, res) {
   const SUPABASE_URL = 'https://anfqwtiugwknlcidbdzh.supabase.co';
@@ -20,7 +19,7 @@ module.exports = async function handler(req, res) {
   let docBlocks = [];
 
   try {
-    const url = `${SUPABASE_URL}/rest/v1/documents?select=id,updated_at,created_at&order=created_at.desc&limit=10000`;
+    const url = `${SUPABASE_URL}/rest/v1/documents?select=id,created_at&order=created_at.desc&limit=10000`;
     const r = await fetch(url, {
       headers: {
         apikey: SUPABASE_KEY,
@@ -36,7 +35,7 @@ module.exports = async function handler(req, res) {
       throw new Error('not array: ' + JSON.stringify(docs).slice(0, 200));
     }
     docBlocks = docs.map(function(d) {
-      const ts = d.updated_at || d.created_at || new Date().toISOString();
+      const ts = d.created_at || new Date().toISOString();
       const lastmod = String(ts).split('T')[0];
       return `  <url>
     <loc>${SITE}/d/${d.id}</loc>
@@ -52,12 +51,12 @@ module.exports = async function handler(req, res) {
 
   const allUrls = [homeBlock].concat(docBlocks).join('\n');
   const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
-    errorInfo + '\n' +
+    (errorInfo ? errorInfo + '\n' : '') +
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
     allUrls + '\n' +
     '</urlset>';
 
   res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=86400');
+  res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
   res.status(200).send(xml);
 };
