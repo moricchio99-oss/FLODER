@@ -445,9 +445,47 @@ function parseUrl() {
 
 window.addEventListener('popstate', () => {
   parseUrl();
+  if(S.page === 'home') updateMeta();
   window.scrollTo(0, 0);
   render();
 });
+
+// ── META TAGS DINAMICI ──
+// Aggiorna i meta tag SEO della pagina corrente. Si chiama sia quando si apre
+// un documento (con i dati reali) sia al ritorno in home (con i default).
+// Serve per far capire a Google che ogni pagina /d/:id è distinta.
+function updateMeta(opts) {
+  opts = opts || {};
+  const DEFAULT_TITLE = 'FileSilver — Free Excel, Word & PowerPoint Templates';
+  const DEFAULT_DESC = 'Find the spreadsheet you need. Free Excel models, trackers, budgets and templates — plus Word docs, PowerPoint slides and PDFs for every office task. Shared by professionals.';
+  const DEFAULT_URL = 'https://filesilver.com';
+  const DEFAULT_IMG = 'https://filesilver.com/og-image.png';
+
+  const title = opts.title || DEFAULT_TITLE;
+  const description = opts.description || DEFAULT_DESC;
+  const url = opts.url || DEFAULT_URL;
+  const image = opts.image || DEFAULT_IMG;
+
+  document.title = title;
+  const setM = (sel, val) => { const el = document.querySelector(sel); if(el) el.setAttribute('content', val); };
+  setM('meta[name="description"]', description);
+  setM('meta[property="og:title"]', title);
+  setM('meta[property="og:description"]', description);
+  setM('meta[property="og:url"]', url);
+  setM('meta[property="og:image"]', image);
+  setM('meta[name="twitter:title"]', title);
+  setM('meta[name="twitter:description"]', description);
+  setM('meta[name="twitter:url"]', url);
+  setM('meta[name="twitter:image"]', image);
+
+  let canonical = document.querySelector('link[rel="canonical"]');
+  if(!canonical) {
+    canonical = document.createElement('link');
+    canonical.rel = 'canonical';
+    document.head.appendChild(canonical);
+  }
+  canonical.href = url;
+}
 
 // ── INIT ──
 async function init() {
@@ -836,6 +874,15 @@ async function buildDocPage(id) {
   const { data: doc } = await sb.from('documents')
     .select('*, profiles(id,name,avatar_url,bio), likes(user_id), saves:document_saves(user_id), comments(id,content,created_at,profiles(id,name,avatar_url))')
     .eq('id', id).single();
+  if(doc) {
+    const t = doc.title || 'Untitled';
+    const desc = (doc.description && doc.description.trim()) || ('Free template "' + t + '" — download for Excel, Word, PowerPoint or PDF on FileSilver.');
+    updateMeta({
+      title: t + ' — FileSilver',
+      description: desc.slice(0, 160),
+      url: 'https://filesilver.com/d/' + id
+    });
+  }
   const container = document.getElementById('DOC_PAGE');
   if(!container) return;
   if(!doc) {
@@ -1573,6 +1620,7 @@ function goHome() {
   history.pushState({}, '', '/');
   S.page = 'home';
   S.docId = null;
+  updateMeta();
   window.scrollTo(0, 0);
   render();
 }
