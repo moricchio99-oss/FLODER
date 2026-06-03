@@ -1,6 +1,8 @@
 // FileSilver — Sitemap dinamica generata da Supabase.
-// Legge tutti i documenti del database (template caricati dagli utenti + seed
-// iniziali) e genera l'XML.
+// Espone a Google solo i template "veri" caricati dagli utenti.
+// I seed iniziali (ID che iniziano per 'aaaa') restano visibili sul sito
+// ma vengono esclusi dalla sitemap per non confondere Google e proteggere
+// la reputazione SEO del dominio.
 
 module.exports = async function handler(req, res) {
   const SUPABASE_URL = 'https://anfqwtiugwknlcidbdzh.supabase.co';
@@ -34,7 +36,12 @@ module.exports = async function handler(req, res) {
     if (!Array.isArray(docs)) {
       throw new Error('not array: ' + JSON.stringify(docs).slice(0, 200));
     }
-    docBlocks = docs.map(function(d) {
+    // Esclude i seed (ID che iniziano per 'aaaa'): restano visibili sul sito
+    // ma fuori dalla sitemap.
+    const realDocs = docs.filter(function(d) {
+      return d && d.id && !String(d.id).toLowerCase().startsWith('aaaa');
+    });
+    docBlocks = realDocs.map(function(d) {
       const ts = d.created_at || new Date().toISOString();
       const lastmod = String(ts).split('T')[0];
       return `  <url>
