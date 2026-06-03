@@ -1,8 +1,9 @@
 // FileSilver — Sitemap dinamica generata da Supabase.
-// Ogni richiesta a /sitemap.xml passa qui: andiamo a Supabase, prendiamo
-// tutti i documenti, e generiamo l'XML con tutti gli URL aggiornati.
+// Ogni richiesta a /sitemap.xml passa qui: legge tutti i documenti da Supabase
+// e genera l'XML aggiornato. Se Supabase fallisce, almeno restituisce la home
+// e mette il messaggio d'errore in un commento HTML per debug.
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   const SUPABASE_URL = 'https://anfqwtiugwknlcidbdzh.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_e7q72bBIfa98OJEOssnB7g_3MbAsBp3';
   const SITE = 'https://filesilver.com';
@@ -15,15 +16,26 @@ export default async function handler(req, res) {
     <priority>1.0</priority>
   </url>`;
 
-  try {
-    const r = await fetch(
-      `${SUPABASE_URL}/rest/v1/documents?select=id,updated_at,created_at&order=created_at.desc&limit=10000`,
-      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
-    );
-    if (!r.ok) throw new Error('supabase ' + r.status);
-    const docs = await r.json();
+  let errorInfo = '';
+  let docBlocks = [];
 
-    const docBlocks = docs.map(d => {
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/documents?select=id,updated_at,created_at&order=created_at.desc&limit=10000`;
+    const r = await fetch(url, {
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`
+      }
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      throw new Error('HTTP ' + r.status + ': ' + txt.slice(0, 200));
+    }
+    const docs = await r.json();
+    if (!Array.isArray(docs)) {
+      throw new Error('not array: ' + JSON.stringify(docs).slice(0, 200));
+    }
+    docBlocks = docs.map(function(d) {
       const ts = d.updated_at || d.created_at || new Date().toISOString();
       const lastmod = String(ts).split('T')[0];
       return `  <url>
@@ -33,22 +45,19 @@ export default async function handler(req, res) {
     <priority>0.8</priority>
   </url>`;
     });
-
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${[homeBlock, ...docBlocks].join('\n')}
-</urlset>`;
-
-    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
-    res.status(200).send(xml);
   } catch (e) {
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${homeBlock}
-</urlset>`;
-    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, s-maxage=60');
-    res.status(200).send(xml);
+    const msg = String((e && e.message) || e).replace(/--/g, '- -').slice(0, 500);
+    errorInfo = '<!-- debug: ' + msg + ' -->';
   }
-}
+
+  const allUrls = [homeBlock].concat(docBlocks).join('\n');
+  const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+    errorInfo + '\n' +
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+    allUrls + '\n' +
+    '</urlset>';
+
+  res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=86400');
+  res.status(200).send(xml);
+};
