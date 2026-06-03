@@ -114,7 +114,7 @@ body{background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSyst
 .card:hover .ctitle{color:var(--ac)}
 .cth{height:190px;position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;border-radius:0;background:#e8e8e8}
 .cth-word{background:#dce8f7}.cth-excel{background:#d8f0e4}.cth-ppt{background:#fde8e0}.cth-pdf{background:#fde0e0}
-.cbdg{position:absolute;top:8px;left:8px;font-size:9px;font-weight:700;letter-spacing:.4px;padding:3px 7px;border-radius:5px;color:#fff;text-transform:uppercase;z-index:2}
+.cbdg{position:absolute;top:8px;right:8px;font-size:9px;font-weight:700;letter-spacing:.4px;padding:3px 7px;border-radius:5px;color:#fff;text-transform:uppercase;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
 .bdg-word{background:var(--wc)}.bdg-excel{background:var(--ec)}.bdg-ppt{background:var(--pc)}.bdg-pdf{background:var(--dc)}
 .cb{padding:10px 2px 8px;display:flex;flex-direction:column;flex:1}
 .ctitle{font-size:13.5px;font-weight:600;color:var(--tx);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:6px;min-height:36px}
@@ -1967,15 +1967,26 @@ async function renderPdfThumbnail(container, url) {
   }
 }
 
-// Anteprima card per gli Excel caricati dagli utenti.
-// Legge il primo foglio e mostra il contenuto pari pari come mini-tabella,
-// riga per riga (nessuna logica "titolo/sottotitolo": stesso stile per tutto).
+// Anteprima card per gli Excel caricati dagli utenti (v3).
+// Salta colonne leading vuote, mostra intestazioni colonna/riga sfumate stile Excel,
+// riga "titolo" (1 cella con contenuto) renderizzata a tutta larghezza.
 async function renderExcelThumbnail(container, url) {
   if(typeof ExcelJS === 'undefined') { renderStyledCard(container, 'excel'); return; }
   const esc = (s) => String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   const argbHex = (a) => { if(!a||typeof a!=='string') return null; return '#' + (a.length===8 ? a.substring(2) : a); };
   const parseAddr = (s) => { const m=s.match(/^([A-Z]+)(\d+)$/); if(!m) return null; let col=0; for(const ch of m[1]) col=col*26+(ch.charCodeAt(0)-64); return {col, row:parseInt(m[2])}; };
   const parseRange = (r) => { const [a,b]=r.split(':'); const A=parseAddr(a), B=parseAddr(b); return A&&B ? {top:A.row,left:A.col,bottom:B.row,right:B.col} : null; };
+  const colLetter = (n) => { let s=''; while(n>0) { const m=(n-1)%26; s=String.fromCharCode(65+m)+s; n=Math.floor((n-1)/26); } return s; };
+  const cellText = (cell) => {
+    let t = cell.text || '';
+    if(!t && cell.value != null) {
+      if(typeof cell.value === 'object') {
+        if(cell.value.result != null) t = String(cell.value.result);
+        else if(cell.value.richText) t = cell.value.richText.map(p=>p.text).join('');
+      } else { t = String(cell.value); }
+    }
+    return t;
+  };
   try {
     const resp = await fetch(url);
     if(!resp.ok) throw new Error('fetch');
@@ -1985,21 +1996,32 @@ async function renderExcelThumbnail(container, url) {
     const ws = wb.worksheets[0];
     if(!ws) throw new Error('empty');
 
-    // Trovo estensione reale del contenuto
     const maxScanRow = Math.min(ws.rowCount || 1, 80);
     const maxScanCol = Math.min(ws.columnCount || 1, 30);
     let lastRow = 0, lastCol = 0;
     for(let r = 1; r <= maxScanRow; r++) {
       const row = ws.getRow(r);
       for(let c = 1; c <= maxScanCol; c++) {
-        const cell = row.getCell(c);
-        const t = (cell.text || (cell.value != null ? String(cell.value) : '')).trim();
+        const t = cellText(row.getCell(c)).trim();
         if(t !== '') { if(r > lastRow) lastRow = r; if(c > lastCol) lastCol = c; }
       }
     }
     if(lastRow === 0) throw new Error('empty');
 
-    // Merges (per banner colorati che si estendono su più colonne)
+    // Skip colonne leading vuote (es. col A usata come margine estetico)
+    let firstCol = 1;
+    for(let c = 1; c <= lastCol; c++) {
+      let colHasContent = false;
+      for(let r = 1; r <= Math.min(lastRow, 30); r++) {
+        const t = cellText(ws.getRow(r).getCell(c)).trim();
+        if(t !== '') { colHasContent = true; break; }
+      }
+      if(colHasContent) { firstCol = c; break; }
+    }
+    const lastColShown = Math.min(lastCol, firstCol + 4); // max 5 colonne dati
+    const numCols = lastColShown - firstCol + 1;
+
+    // Merges
     const mergeOrigin = new Map();
     const mergeSkip = new Set();
     const mergeRanges = (ws.model && ws.model.merges) || [];
@@ -2012,74 +2034,92 @@ async function renderExcelThumbnail(container, url) {
           if(r!==m.top || c!==m.left) mergeSkip.add(`${r},${c}`);
     }
 
-    // Render: prime 7 righe non vuote, prime 6 colonne
-    const MAX_ROWS = 7;
-    const maxC = Math.min(lastCol, 6);
+    // Intestazione lettere colonna (sfumata)
+    const refStyle = 'background:#fafaf8;color:#c2bdb2;font-size:8.5px;font-weight:500';
+    let headerHtml = `<tr><th style="${refStyle};height:14px;width:22px;border-right:0.5px solid #ececec;border-bottom:0.5px solid #ececec"></th>`;
+    for(let c = firstCol; c <= lastColShown; c++) {
+      const isLast = (c === lastColShown);
+      headerHtml += `<th style="${refStyle};height:14px;text-align:center;${isLast?'':'border-right:0.5px solid #ececec;'}border-bottom:0.5px solid #ececec">${colLetter(c)}</th>`;
+    }
+    headerHtml += '</tr>';
+
+    const MAX_ROWS = 8;
     let rows = '', rendered = 0;
     for(let r = 1; r <= lastRow && rendered < MAX_ROWS; r++) {
-      let hasContent = false;
-      for(let c = 1; c <= maxC; c++) {
-        if(mergeOrigin.has(`${r},${c}`)) { hasContent = true; break; }
-        const cell = ws.getRow(r).getCell(c);
-        const t = (cell.text || (cell.value != null ? String(cell.value) : '')).trim();
-        if(t !== '') { hasContent = true; break; }
-      }
-      if(!hasContent) continue;
-
-      let cells = '';
-      for(let c = 1; c <= maxC; c++) {
+      // Conta celle non vuote nella riga (visibili)
+      let nonEmptyCount = 0;
+      let firstNonEmptyCol = -1;
+      for(let c = firstCol; c <= lastColShown; c++) {
         if(mergeSkip.has(`${r},${c}`)) continue;
-        const cell = ws.getRow(r).getCell(c);
-
-        const origin = mergeOrigin.get(`${r},${c}`);
-        const spanAttr = origin ? ` colspan="${Math.min(origin.colSpan, maxC - c + 1)}"` : '';
-
-        // Testo visibile
-        let displayText = cell.text || '';
-        if(!displayText && cell.value != null) {
-          if(typeof cell.value === 'object') {
-            if(cell.value.result != null) displayText = String(cell.value.result);
-            else if(cell.value.richText) displayText = cell.value.richText.map(p=>p.text).join('');
-          } else {
-            displayText = String(cell.value);
-          }
+        if(mergeOrigin.has(`${r},${c}`)) {
+          if(firstNonEmptyCol < 0) firstNonEmptyCol = c;
+          nonEmptyCount++;
+          continue;
         }
-        if(displayText.length > 18) displayText = displayText.slice(0, 18) + '…';
+        const t = cellText(ws.getRow(r).getCell(c)).trim();
+        if(t !== '') {
+          if(firstNonEmptyCol < 0) firstNonEmptyCol = c;
+          nonEmptyCount++;
+        }
+      }
+      if(nonEmptyCount === 0) continue;
 
-        // Stili (font size FISSO 9.5px per la mini-card; preservo colori/sfondo/bold/allineamento del file)
-        const sty = ['padding:3px 5px','font-size:9.5px','line-height:1.3','white-space:nowrap','overflow:hidden','text-overflow:ellipsis','border:0.5px solid #d8d5cd'];
+      // Cella ref riga (numero reale del file)
+      let cells = `<td style="${refStyle};text-align:center;border-right:0.5px solid #ececec;border-bottom:0.5px solid #ececec;height:22px">${r}</td>`;
 
+      // Riga titolo: 1 sola cella con contenuto E si trova alla prima posizione
+      const originFirst = mergeOrigin.get(`${r},${firstCol}`);
+      const isFullRowMerge = originFirst && originFirst.colSpan >= numCols;
+      const isTitleRow = (nonEmptyCount === 1 && firstNonEmptyCol === firstCol) || isFullRowMerge;
+
+      const renderCellStyle = (cell, isFirstDataRow) => {
+        const sty = ['padding:4px 8px','font-size:11px','line-height:1.3','white-space:nowrap','overflow:hidden','text-overflow:ellipsis'];
         const font = cell.font || {};
         if(font.bold) sty.push('font-weight:700');
         if(font.italic) sty.push('font-style:italic');
         const fcol = font.color && font.color.argb ? argbHex(font.color.argb) : null;
         sty.push(`color:${fcol || '#2c2c2a'}`);
-
         const fill = cell.fill;
+        let hasFill = false;
         if(fill && fill.type === 'pattern' && fill.pattern === 'solid' && fill.fgColor && fill.fgColor.argb) {
           const bg = argbHex(fill.fgColor.argb);
-          if(bg) sty.push(`background:${bg}`);
+          if(bg) { sty.push(`background:${bg}`); hasFill = true; }
         }
+        // Bordo: tenue di default, semitrasparente su celle colorate
+        sty.push(hasFill ? 'border:0.5px solid rgba(0,0,0,0.1)' : 'border:0.5px solid #ececec');
+        if(isFirstDataRow) { sty.push('font-size:12px'); if(!font.bold) sty.push('font-weight:700'); }
+        return sty;
+      };
 
-        const align = cell.alignment || {};
-        let textAlign = align.horizontal;
-        if(!textAlign || textAlign === 'general') {
-          textAlign = (cell.type === 2 || cell.type === 6) ? 'right' : 'left';
+      if(isTitleRow) {
+        const cell = ws.getRow(r).getCell(firstNonEmptyCol);
+        const sty = renderCellStyle(cell, rendered === 0);
+        cells += `<td colspan="${numCols}" style="${sty.join(';')}">${esc(cellText(cell))}</td>`;
+      } else {
+        for(let c = firstCol; c <= lastColShown; c++) {
+          if(mergeSkip.has(`${r},${c}`)) continue;
+          const cell = ws.getRow(r).getCell(c);
+          const origin = mergeOrigin.get(`${r},${c}`);
+          const spanAttr = origin ? ` colspan="${Math.min(origin.colSpan, lastColShown - c + 1)}"` : '';
+          const sty = renderCellStyle(cell, false);
+          const align = cell.alignment || {};
+          let textAlign = align.horizontal;
+          if(!textAlign || textAlign === 'general') {
+            textAlign = (cell.type === 2 || cell.type === 6) ? 'right' : 'left';
+          }
+          sty.push(`text-align:${textAlign}`);
+          cells += `<td${spanAttr} style="${sty.join(';')}">${esc(cellText(cell))}</td>`;
         }
-        sty.push(`text-align:${textAlign}`);
-
-        cells += `<td${spanAttr} style="${sty.join(';')}">${esc(displayText)}</td>`;
       }
       rows += `<tr>${cells}</tr>`;
       rendered++;
     }
 
-    const tableHtml = rows ? `<table style="width:100%;border-collapse:collapse;table-layout:fixed">${rows}</table>` : '';
+    const tableHtml = rows ? `<table style="width:100%;height:100%;border-collapse:collapse;table-layout:fixed">${headerHtml}${rows}</table>` : '';
 
     container.innerHTML = `
-      <div style="width:100%;height:100%;background:#fff;border-radius:10px;overflow:hidden;position:relative;padding:14px 14px 0;box-sizing:border-box">
+      <div style="width:100%;height:100%;background:#fff;border-radius:10px;overflow:hidden;position:relative;box-sizing:border-box">
         ${tableHtml}
-        <div style="position:absolute;bottom:0;left:0;right:0;height:30px;background:linear-gradient(180deg,rgba(255,255,255,0) 0%,#fff 82%);pointer-events:none"></div>
       </div>`;
   } catch(e) {
     renderStyledCard(container, 'excel');
