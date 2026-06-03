@@ -1792,7 +1792,8 @@ function fileChosen(inp) {
   const ext = f.name.split('.').pop().toLowerCase();
   const typeMap = {docx:'word',xlsx:'excel',pptx:'ppt',pdf:'pdf'};
   S.uploadType = typeMap[ext] || 'word';
-  document.getElementById('DRL').innerHTML = `<strong>${f.name}</strong> (${(f.size/1024/1024).toFixed(1)} MB)`;
+  const fsz = f.size < 1048576 ? `${Math.max(1, Math.round(f.size/1024))} KB` : `${(f.size/1048576).toFixed(1)} MB`;
+  document.getElementById('DRL').innerHTML = `<strong>${f.name}</strong> (${fsz})`;
   document.getElementById('DRZ').classList.add('ok');
   const t = document.getElementById('UPT');
   if(t&&!t.value) t.value = f.name.replace(/\.(docx|xlsx|pptx|pdf)$/i,'');
