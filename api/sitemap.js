@@ -1,6 +1,6 @@
 // FileSilver — Sitemap dinamica generata da Supabase.
-// Legge tutti i documenti pubblicati e genera l'XML.
-// Se Supabase fallisce, mostra l'errore in un commento HTML.
+// Legge tutti i documenti del database (template caricati dagli utenti + seed
+// iniziali) e genera l'XML.
 
 module.exports = async function handler(req, res) {
   const SUPABASE_URL = 'https://anfqwtiugwknlcidbdzh.supabase.co';
