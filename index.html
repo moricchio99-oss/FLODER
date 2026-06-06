@@ -657,7 +657,7 @@ function paginatedGrid(docs, prefix) {
 function doLoadMore(key) {
   const btn = document.getElementById('lm_'+key);
   if(btn){btn.classList.add('loading');btn.disabled=true;}
-  setTimeout(()=>{ PG[key]=(PG[key]||PAGE_SIZE)+PAGE_SIZE; buildCN(); }, 350);
+  setTimeout(()=>{ PG[key]=(PG[key]||PAGE_SIZE)+PAGE_SIZE; buildCN_soft(); }, 350);
 }
 
 // ── NAV ──
